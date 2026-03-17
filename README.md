@@ -33,6 +33,23 @@ pnpm dev
 
 Open [http://localhost:3000](http://localhost:3000) — ChatClaw auto-detects your local OpenClaw Gateway and syncs your agents.
 
+## Remote Gateway / ClawHost
+
+For remote deployments, configure the gateway with environment variables instead of relying on `~/.openclaw/openclaw.json`.
+
+```bash
+cp .env.example .env.local
+```
+
+Set:
+
+```bash
+GATEWAY_URL=http://clawhost.example.com/proxy/your-bot-id
+GATEWAY_TOKEN=your-bot-access-token
+```
+
+When `GATEWAY_URL` and `GATEWAY_TOKEN` are present, ChatClaw uses them for gateway detection and bootstrap. If they are not set, ChatClaw falls back to the local `~/.openclaw/openclaw.json` flow for backward compatibility.
+
 ## Prerequisites
 
 A running [OpenClaw](https://github.com/openclaw/openclaw) Gateway with:

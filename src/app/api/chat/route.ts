@@ -9,8 +9,10 @@ export async function POST(req: NextRequest) {
   const body = await req.text();
 
   const baseUrl = gatewayUrl
+    .trim()
     .replace(/^ws:\/\//, "http://")
-    .replace(/^wss:\/\//, "https://");
+    .replace(/^wss:\/\//, "https://")
+    .replace(/\/+$/, "");
 
   const upstream = await fetch(`${baseUrl}/v1/chat/completions`, {
     method: "POST",
