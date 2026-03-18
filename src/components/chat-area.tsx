@@ -3,12 +3,15 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import {
   Bot,
+  LayoutDashboard,
   Loader2,
+  Rocket,
   Send,
   Sparkles,
   Square,
   Users,
 } from "lucide-react";
+import { LobsterDashboard } from "@/components/lobster-dashboard";
 import { useStore } from "@/lib/store";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { cn } from "@/lib/utils";
@@ -73,6 +76,7 @@ export function ChatArea() {
   const { state, dispatch, actions } = useStore();
   const [input, setInput] = useState("");
   const [composing, setComposing] = useState(false);
+  const [showDashboard, setShowDashboard] = useState(false);
   const [lobsterName, setLobsterName] = useState("");
   const [lobsterRole, setLobsterRole] = useState<Agent["specialty"] | null>(null);
   const [creatingLobster, setCreatingLobster] = useState(false);
@@ -446,8 +450,21 @@ export function ChatArea() {
             <span className="text-sm text-discord-muted truncate">{chatSubtitle}</span>
           </>
         )}
+        <button
+          onClick={() => setShowDashboard(!showDashboard)}
+          className={cn(
+            "ml-auto flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors",
+            showDashboard
+              ? "bg-discord-blurple text-white"
+              : "text-discord-muted hover:text-foreground hover:bg-white/5"
+          )}
+          title="Lobster Dashboard"
+        >
+          <LayoutDashboard className="h-3.5 w-3.5" />
+          Dashboard
+        </button>
         {target.type === "team" && teamAgents.length > 0 && (
-          <div className="ml-auto flex -space-x-2">
+          <div className="flex -space-x-2">
             {teamAgents.slice(0, 5).map((agent) => {
               const identity = state.agentIdentities[agent.id];
               return (
@@ -464,6 +481,10 @@ export function ChatArea() {
         )}
       </div>
 
+      {showDashboard ? (
+        <LobsterDashboard />
+      ) : (
+      <>
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         {state.messages.length === 0 && streamingEntries.length === 0 && (
@@ -593,6 +614,8 @@ export function ChatArea() {
         <div ref={messagesEndRef} />
       </div>
 
+      </>
+      )}
       {/* Input area */}
       <div className="shrink-0 px-4 pb-6 pt-0">
         <div className="flex items-end gap-2 rounded-lg bg-[#383a40] px-4 py-2">
