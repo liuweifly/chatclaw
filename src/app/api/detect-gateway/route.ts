@@ -10,6 +10,7 @@ export async function GET() {
   return NextResponse.json({
     found: true,
     url: config.url,
-    token: config.token,
+    hasToken: Boolean(config.token),
+    source: config.source,
   });
 }
