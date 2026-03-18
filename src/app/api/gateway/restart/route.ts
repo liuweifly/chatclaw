@@ -1,22 +1,18 @@
 import { NextResponse } from "next/server";
-import { exec } from "child_process";
-import { promisify } from "util";
-
-const execAsync = promisify(exec);
+import { getGatewayConfig } from "@/lib/gateway-config";
 
 export async function POST() {
-  try {
-    const { stdout, stderr } = await execAsync("openclaw gateway restart", {
-      timeout: 15_000,
-    });
+  const gateway = await getGatewayConfig();
 
-    return NextResponse.json({
-      ok: true,
-      stdout: stdout.trim(),
-      stderr: stderr.trim(),
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 500 });
+  if (!gateway || gateway.source !== "local") {
+    return NextResponse.json(
+      { error: "Remote gateway restart is disabled from ChatClaw." },
+      { status: 403 }
+    );
   }
+
+  return NextResponse.json(
+    { error: "Local gateway restart is disabled in this deployment." },
+    { status: 501 }
+  );
 }
