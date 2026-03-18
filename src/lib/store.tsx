@@ -463,8 +463,22 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     description: string;
     specialty: AgentSpecialty;
   }) => {
+    const current = stateRef.current;
+    const companyAgents = current.agents.filter((a) => a.companyId === opts.companyId);
+    const baseSlug = opts.name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "agent";
+    let agentId = baseSlug;
+    let counter = 2;
+    while (companyAgents.some((a) => a.id === agentId)) {
+      agentId = `${baseSlug}-${counter}`;
+      counter += 1;
+    }
+
     const agent: Agent = {
-      id: uuidv4(),
+      id: agentId,
       companyId: opts.companyId,
       name: opts.name,
       description: opts.description,
@@ -706,8 +720,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             const companyId = uuidv4();
             const company: Company = {
               id: companyId,
-              name: "OpenClaw",
-              description: "Auto-configured from OpenClaw Gateway",
+              name: "AI Operator Demo",
+              description: "Hosted OpenClaw demo workspace",
               gatewayUrl: data.gateway.url,
               gatewayToken: data.gateway.token,
               createdAt: Date.now(),
