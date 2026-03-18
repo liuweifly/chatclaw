@@ -106,30 +106,30 @@ export function ChatArea() {
   const demoPrompts = target?.type === "team"
     ? [
         {
-          label: "Plan my day",
-          prompt: "Plan my day like an executive operator. I have three meetings, two hours for deep work, and need to move a product demo forward. Give me a realistic schedule with priorities.",
+          label: "🗓️ Run my day",
+          prompt: "Act as my executive operator. I have three meetings, two hours for deep work, and need to move a product demo forward. Build me a realistic schedule with clear priorities and time blocks.",
         },
         {
-          label: "Analyze an idea",
-          prompt: "Analyze this idea: an AI operator that can run customer onboarding. Give me the strengths, risks, and the first experiment I should run.",
+          label: "🔍 Stress-test my idea",
+          prompt: "I want to build an AI operator that handles customer onboarding end-to-end. As a team, pressure-test this: what are the real strengths, hidden risks, and the one experiment I should run first?",
         },
         {
-          label: "Multi-agent product advice",
-          prompt: "Work as a product team and pressure-test a hosted OpenClaw demo. What should the landing page promise, what should the onboarding do, and what would make a buyer believe it in five minutes?",
+          label: "🚀 Ship my demo",
+          prompt: "Work as a product team. I'm building a hosted OpenClaw demo. Tell me exactly what the landing page should promise, what the onboarding must do, and what would make a buyer say yes in five minutes.",
         },
       ]
     : [
         {
-          label: "Plan my day",
-          prompt: "Plan my day like an executive operator. I have three meetings, two hours for deep work, and need to move a product demo forward. Give me a realistic schedule with priorities.",
+          label: "🗓️ Run my day",
+          prompt: "Act as my executive operator. I have three meetings, two hours for deep work, and need to move a product demo forward. Build me a realistic schedule with clear priorities and time blocks.",
         },
         {
-          label: "Analyze an idea",
-          prompt: "Analyze this idea: an AI operator that can run customer onboarding. Give me the strengths, risks, and the first experiment I should run.",
+          label: "🔍 Stress-test my idea",
+          prompt: "I want to build an AI operator that handles customer onboarding end-to-end. Pressure-test this: what are the real strengths, hidden risks, and the one experiment I should run first?",
         },
         {
-          label: "Product advice",
-          prompt: "Give me product advice for a hosted OpenClaw demo. What should the first-run experience emphasize, and how do I make value obvious in the first 30 seconds?",
+          label: "🚀 Ship my demo",
+          prompt: "I'm building a hosted AI operator demo. Tell me exactly what the first-run experience should emphasize and how to make value obvious in the first 30 seconds. Be specific, not generic.",
         },
       ];
 
@@ -400,16 +400,16 @@ export function ChatArea() {
           </div>
           <div className="mt-8 grid gap-3 rounded-3xl border border-white/6 bg-black/10 p-4 text-sm text-discord-muted md:grid-cols-3">
             <div>
-              <p className="font-medium text-foreground">Plan your day</p>
-              <p className="mt-1">Generate an operator-grade schedule from one prompt.</p>
+              <p className="font-medium text-foreground">🗓️ Run my day</p>
+              <p className="mt-1">Get an operator-grade schedule in one prompt.</p>
             </div>
             <div>
-              <p className="font-medium text-foreground">Analyze an idea</p>
+              <p className="font-medium text-foreground">🔍 Stress-test my idea</p>
               <p className="mt-1">Pressure-test a concept with strengths, risks, and next steps.</p>
             </div>
             <div>
-              <p className="font-medium text-foreground">Product advice</p>
-              <p className="mt-1">Turn the demo into a concrete product story fast.</p>
+              <p className="font-medium text-foreground">🚀 Ship my demo</p>
+              <p className="mt-1">Turn a vague plan into a concrete product story.</p>
             </div>
           </div>
         </div>
@@ -476,14 +476,17 @@ export function ChatArea() {
               )}
             </div>
             <p className="text-2xl font-bold text-foreground mb-1">
-              {target.type === "agent" ? `Chat with ${chatTitle}` : `${chatTitle}`}
+              {target.type === "agent" ? `${chatTitle} is ready` : `${chatTitle}`}
             </p>
-            <p className="text-sm">
+            <p className="text-sm max-w-md text-center">
               {target.type === "agent"
-                ? targetAgent?.description || "Start a conversation"
-                : targetTeam?.description || "Multi-agent chat with your specialist team"}
+                ? targetAgent?.description || "Your lobster is online and waiting for instructions."
+                : targetTeam?.description || "Your specialist team is standing by."}
             </p>
-            <div className="mt-6 flex w-full max-w-2xl flex-wrap justify-center gap-3">
+            <p className="mt-4 text-xs text-discord-muted">
+              Pick a task below or type anything to get started.
+            </p>
+            <div className="mt-4 flex w-full max-w-2xl flex-wrap justify-center gap-3">
               {demoPrompts.map((demoPrompt) => (
                 <button
                   key={demoPrompt.label}
@@ -491,8 +494,8 @@ export function ChatArea() {
                   className="min-w-[180px] rounded-2xl border border-white/8 bg-discord-mid px-4 py-3 text-left transition-colors hover:bg-[#373941]"
                 >
                   <p className="text-sm font-medium text-foreground">{demoPrompt.label}</p>
-                  <p className="mt-1 text-xs leading-5 text-discord-muted">
-                    {demoPrompt.prompt}
+                  <p className="mt-1 text-xs leading-5 text-discord-muted line-clamp-2">
+                    {demoPrompt.prompt.slice(0, 80)}…
                   </p>
                 </button>
               ))}
