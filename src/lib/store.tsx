@@ -444,6 +444,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, [disconnectGateway]);
 
   const selectCompanyAction = useCallback(async (id: string) => {
+    const current = stateRef.current;
+    const company = current.companies.find((entry) => entry.id === id);
+
     disconnectGateway();
     dispatch({ type: "SET_ACTIVE_COMPANY", id });
 
@@ -453,6 +456,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     ]);
     dispatch({ type: "SET_AGENTS", agents });
     dispatch({ type: "SET_TEAMS", teams });
+
+    if (company?.defaultAgentId && agents.some((agent) => agent.id === company.defaultAgentId)) {
+      dispatch({
+        type: "SET_CHAT_TARGET",
+        target: { type: "agent", id: company.defaultAgentId },
+      });
+      const messages = await getMessagesByTarget("agent", company.defaultAgentId);
+      dispatch({ type: "SET_MESSAGES", messages });
+    }
 
     setTimeout(() => connectGateway(), 50);
   }, [disconnectGateway, connectGateway]);
@@ -513,8 +525,24 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const deleteAgentAction = useCallback(async (id: string) => {
+    const current = stateRef.current;
+    const deletedAgent = current.agents.find((agent) => agent.id === id);
+
     await dbDeleteAgent(id);
     dispatch({ type: "REMOVE_AGENT", id });
+
+    if (deletedAgent) {
+      const company = current.companies.find((entry) => entry.id === deletedAgent.companyId);
+      if (company?.defaultAgentId === id) {
+        const fallbackAgentId = current.agents.find(
+          (agent) => agent.companyId === deletedAgent.companyId && agent.id !== id
+        )?.id;
+        const updates = { defaultAgentId: fallbackAgentId };
+
+        await dbUpdateCompany(deletedAgent.companyId, updates);
+        dispatch({ type: "UPDATE_COMPANY", id: deletedAgent.companyId, updates });
+      }
+    }
 
     try {
       await fetch("/api/agents/delete", {
@@ -527,7 +555,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Clear chat if this was the active target
-    const current = stateRef.current;
     if (current.activeChatTarget?.type === "agent" && current.activeChatTarget?.id === id) {
       dispatch({ type: "SET_CHAT_TARGET", target: null });
       dispatch({ type: "SET_MESSAGES", messages: [] });
@@ -749,7 +776,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         }
       } else {
         dispatch({ type: "SET_COMPANIES", companies });
-        const firstId = companies[0].id;
+        const firstCompany = companies[0];
+        const firstId = firstCompany.id;
         dispatch({ type: "SET_ACTIVE_COMPANY", id: firstId });
 
         const [agents, teams] = await Promise.all([
@@ -758,6 +786,18 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         ]);
         dispatch({ type: "SET_AGENTS", agents });
         dispatch({ type: "SET_TEAMS", teams });
+
+        if (
+          firstCompany.defaultAgentId &&
+          agents.some((agent) => agent.id === firstCompany.defaultAgentId)
+        ) {
+          dispatch({
+            type: "SET_CHAT_TARGET",
+            target: { type: "agent", id: firstCompany.defaultAgentId },
+          });
+          const messages = await getMessagesByTarget("agent", firstCompany.defaultAgentId);
+          dispatch({ type: "SET_MESSAGES", messages });
+        }
       }
 
       dispatch({ type: "SET_INITIALIZED" });

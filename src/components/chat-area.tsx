@@ -4,7 +4,6 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import {
   Bot,
   Loader2,
-  Rocket,
   Send,
   Sparkles,
   Square,
@@ -26,17 +25,64 @@ function StreamingDots() {
   );
 }
 
+const onboardingTemplates: Array<{
+  value: Agent["specialty"];
+  label: string;
+  description: string;
+}> = [
+  {
+    value: "general",
+    label: "General",
+    description: "Planning, analysis, and everyday operator work.",
+  },
+  {
+    value: "research",
+    label: "Research",
+    description: "Synthesis, investigation, and decision support.",
+  },
+  {
+    value: "coding",
+    label: "Builder",
+    description: "Prototypes, fixes, and technical execution.",
+  },
+  {
+    value: "writing",
+    label: "Writer",
+    description: "Messaging, drafts, and crisp copy.",
+  },
+  {
+    value: "design",
+    label: "Design",
+    description: "UX feedback, flows, and interface thinking.",
+  },
+];
+
+function buildLobsterDescription(name: string, specialty: Agent["specialty"]) {
+  const descriptions: Record<Agent["specialty"], string> = {
+    general: `${name} is your personal lobster for planning, analysis, and moving work forward fast.`,
+    research: `${name} is your personal lobster for research, synthesis, and pressure-testing decisions.`,
+    coding: `${name} is your personal lobster for building prototypes, solving technical problems, and shipping fixes.`,
+    writing: `${name} is your personal lobster for crisp messaging, drafts, and structured writing work.`,
+    design: `${name} is your personal lobster for UX feedback, product flows, and interface direction.`,
+  };
+
+  return descriptions[specialty];
+}
+
 export function ChatArea() {
   const { state, dispatch, actions } = useStore();
   const [input, setInput] = useState("");
   const [composing, setComposing] = useState(false);
-  const [launching, setLaunching] = useState(false);
-  const [launchError, setLaunchError] = useState<string | null>(null);
+  const [lobsterName, setLobsterName] = useState("");
+  const [lobsterRole, setLobsterRole] = useState<Agent["specialty"] | null>(null);
+  const [creatingLobster, setCreatingLobster] = useState(false);
+  const [creationError, setCreationError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const target = state.activeChatTarget;
   const isConnected = state.connectionStatus === "connected";
+  const activeCompany = state.companies.find((company) => company.id === state.activeCompanyId);
   const companyAgents = state.activeCompanyId
     ? state.agents.filter((agent) => agent.companyId === state.activeCompanyId)
     : [];
@@ -125,15 +171,27 @@ export function ChatArea() {
     textareaRef.current?.focus();
   }, [actions, isConnected, isStreamingCurrentTarget, target]);
 
-  const handleLaunchLobster = useCallback(async () => {
-    if (launching) return;
+  const handleCreateLobster = useCallback(async () => {
+    if (creatingLobster) return;
 
-    setLaunching(true);
-    setLaunchError(null);
+    const trimmedName = lobsterName.trim();
+    if (!trimmedName) {
+      setCreationError("Name your lobster to continue.");
+      return;
+    }
+
+    setCreatingLobster(true);
+    setCreationError(null);
 
     try {
       let companyId = state.activeCompanyId;
-      let availableAgents = companyAgents;
+      let bootstrapData:
+        | {
+            found?: boolean;
+            gateway?: { url?: string; token?: string };
+            agents?: Array<{ id: string; name: string }>;
+          }
+        | null = null;
 
       const importGatewayAgents = async (
         nextCompanyId: string,
@@ -159,60 +217,57 @@ export function ChatArea() {
         return importedAgents;
       };
 
-      if (!companyId || availableAgents.length === 0) {
+      if (!companyId) {
         const response = await fetch("/api/bootstrap", { cache: "no-store" });
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error("The hosted demo could not initialize.");
-        }
-
-        if (!companyId) {
-          if (!data?.found || !data?.gateway?.url || !data?.gateway?.token) {
-            throw new Error("No demo workspace was detected. Open gateway settings to connect one.");
-          }
-
-          const company = await actions.createCompany(
-            "Hosted OpenClaw Demo",
-            data.gateway.url,
-            data.gateway.token,
-            "Demo-ready AI operator workspace"
-          );
-
-          companyId = company.id;
-          await actions.selectCompany(company.id);
-          availableAgents = [];
-        }
-
-        if (companyId && availableAgents.length === 0 && Array.isArray(data?.agents) && data.agents.length > 0) {
-          availableAgents = await importGatewayAgents(companyId, data.agents);
+        if (response.ok) {
+          bootstrapData = await response.json();
         }
       }
 
-      let nextAgent = availableAgents[0] ?? null;
+      if (!companyId) {
+        const gatewayUrl = bootstrapData?.found ? bootstrapData.gateway?.url ?? "" : "";
+        const gatewayToken = bootstrapData?.found ? bootstrapData.gateway?.token ?? "" : "";
+        const company = await actions.createCompany(
+          `${trimmedName} Workspace`,
+          gatewayUrl,
+          gatewayToken,
+          gatewayUrl
+            ? `Personal demo workspace for ${trimmedName}.`
+            : `Personal workspace for ${trimmedName}. Connect a gateway to start chatting.`
+        );
+
+        companyId = company.id;
+        await actions.selectCompany(company.id);
+
+        if (Array.isArray(bootstrapData?.agents) && bootstrapData.agents.length > 0) {
+          await importGatewayAgents(companyId, bootstrapData.agents);
+        }
+      }
 
       if (!companyId) {
         throw new Error("No workspace was available.");
       }
 
-      if (!nextAgent) {
-        nextAgent = await actions.createAgent({
-          companyId,
-          name: "Lobster",
-          description: "Demo-ready AI operator for planning, analysis, and product strategy.",
-          specialty: "general",
-        });
-      }
+      const specialty = lobsterRole ?? "general";
+      const nextAgent = await actions.createAgent({
+        companyId,
+        name: trimmedName,
+        description: buildLobsterDescription(trimmedName, specialty),
+        specialty,
+      });
 
+      await actions.updateCompany(companyId, { defaultAgentId: nextAgent.id });
       await actions.selectChatTarget({ type: "agent", id: nextAgent.id });
+      setLobsterName("");
+      setLobsterRole(null);
     } catch (error) {
-      setLaunchError(
-        error instanceof Error ? error.message : "Could not launch your lobster."
+      setCreationError(
+        error instanceof Error ? error.message : "Could not create your lobster."
       );
     } finally {
-      setLaunching(false);
+      setCreatingLobster(false);
     }
-  }, [actions, companyAgents, dispatch, launching, state.activeCompanyId]);
+  }, [actions, creatingLobster, dispatch, lobsterName, lobsterRole, state.activeCompanyId]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -234,12 +289,9 @@ export function ChatArea() {
 
   // No target selected — empty state
   if (!target) {
-    const primaryLabel = companyAgents.length > 0
-      ? "Launch your lobster"
-      : "Create your AI operator";
-    const secondaryLine = companyAgents.length > 0
-      ? "One click into a ready-to-chat operator."
-      : "We’ll create the workspace and drop you straight into chat.";
+    const secondaryLine = activeCompany
+      ? "Name it once, pick an optional role, and land directly in its chat."
+      : "We’ll create the workspace, set a default lobster, and drop you straight into chat.";
 
     return (
       <div className="relative flex flex-1 h-full items-center justify-center overflow-hidden bg-discord-light px-6 py-10">
@@ -252,7 +304,7 @@ export function ChatArea() {
                 Hosted demo
               </div>
               <h1 className="text-4xl font-semibold tracking-tight text-foreground">
-                Create your lobster and feel the value in under 30 seconds.
+                Create your lobster in one short step.
               </h1>
               <p className="mt-3 max-w-lg text-sm leading-6 text-discord-muted">
                 {secondaryLine}
@@ -262,36 +314,87 @@ export function ChatArea() {
                   1-click setup
                 </div>
                 <div className="rounded-full border border-white/8 bg-black/10 px-3 py-1.5">
-                  Ready-to-chat agent
+                  Personal default chat
                 </div>
                 <div className="rounded-full border border-white/8 bg-black/10 px-3 py-1.5">
                   Preset demo prompts
                 </div>
               </div>
             </div>
-            <div className="w-full max-w-xs rounded-3xl border border-white/8 bg-black/10 p-4">
+            <div className="w-full max-w-sm rounded-3xl border border-white/8 bg-black/10 p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-discord-muted">
                 Start here
               </p>
               <p className="mt-2 text-sm leading-6 text-foreground">
-                {companyAgents.length > 0
-                  ? "Open your demo operator and start chatting immediately."
-                  : "We’ll use the demo gateway if it exists, otherwise create a fresh lobster for you."}
+                Give it a name. Add a role if you want. Everything else stays available in the workspace.
               </p>
+              <div className="mt-4 space-y-3">
+                <div>
+                  <label className="text-xs font-semibold uppercase tracking-[0.18em] text-discord-muted">
+                    Name
+                  </label>
+                  <input
+                    value={lobsterName}
+                    onChange={(event) => {
+                      setLobsterName(event.target.value);
+                      if (creationError) {
+                        setCreationError(null);
+                      }
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        void handleCreateLobster();
+                      }
+                    }}
+                    placeholder="Atlas"
+                    className="mt-2 w-full rounded-2xl border border-white/8 bg-[#1f2126] px-4 py-3 text-sm text-foreground outline-none transition-colors placeholder:text-discord-muted focus:border-discord-blurple"
+                  />
+                </div>
+                <div>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold uppercase tracking-[0.18em] text-discord-muted">
+                      Role
+                    </label>
+                    <span className="text-[11px] text-discord-muted">Optional</span>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {onboardingTemplates.map((template) => {
+                      const isActive = lobsterRole === template.value;
+                      return (
+                        <button
+                          key={template.value}
+                          onClick={() => setLobsterRole(isActive ? null : template.value)}
+                          className={cn(
+                            "rounded-full border px-3 py-1.5 text-xs transition-colors",
+                            isActive
+                              ? "border-discord-blurple bg-discord-blurple text-white"
+                              : "border-white/8 bg-[#1f2126] text-discord-muted hover:text-foreground"
+                          )}
+                          title={template.description}
+                        >
+                          {template.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
               <button
-                onClick={handleLaunchLobster}
-                disabled={launching}
+                onClick={() => void handleCreateLobster()}
+                disabled={creatingLobster || !lobsterName.trim()}
                 className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-discord-blurple px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-discord-blurple/85 disabled:cursor-wait disabled:opacity-70"
               >
-                {launching ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Rocket className="h-4 w-4" />
-                )}
-                {primaryLabel}
+                {creatingLobster && <Loader2 className="h-4 w-4 animate-spin" />}
+                Create my lobster
               </button>
-              {launchError && (
-                <p className="mt-3 text-sm text-discord-red">{launchError}</p>
+              {creationError && (
+                <p className="mt-3 text-sm text-discord-red">{creationError}</p>
+              )}
+              {companyAgents.length > 0 && (
+                <p className="mt-3 text-xs leading-5 text-discord-muted">
+                  Existing agents and teams stay in the sidebar for manual demos.
+                </p>
               )}
             </div>
           </div>
