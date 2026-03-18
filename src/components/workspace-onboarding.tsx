@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowRight, Check, Link2, MessageSquare, Package } from "lucide-react";
+import { useTranslations } from "@/i18n/provider";
 import type { LobsterOnboardingState, OnboardingStepView } from "@/lib/workspace";
 
 interface WorkspaceOnboardingProps {
@@ -16,23 +17,25 @@ export function WorkspaceOnboarding({
   onNavigate,
   onSkip,
 }: WorkspaceOnboardingProps) {
+  const t = useTranslations("workspace.onboarding");
+
   return (
     <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/55 p-6 backdrop-blur-sm">
       <div className="w-full max-w-2xl rounded-[28px] border border-white/6 bg-discord-light p-6 shadow-[0_24px_80px_rgba(0,0,0,0.35)]">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-discord-muted">
-              First-time setup
+              {t("eyebrow")}
             </p>
             <h2 className="mt-3 text-2xl font-semibold text-foreground">
-              Finish setting up {lobsterName}
+              {t("title", { name: lobsterName })}
             </h2>
             <p className="mt-2 max-w-xl text-sm leading-6 text-discord-muted">
-              Visit the key workspace areas once so the new-user flow makes sense from the start.
+              {t("description")}
             </p>
           </div>
           <div className="rounded-full border border-white/8 bg-white/5 px-3 py-1 text-xs font-semibold text-discord-muted">
-            3 steps
+            {t("steps")}
           </div>
         </div>
 
@@ -40,22 +43,22 @@ export function WorkspaceOnboarding({
           {[
             {
               key: "chat" as OnboardingStepView,
-              title: "Say hello",
-              description: "Open chat and start the first conversation.",
+              title: t("items.chat.title"),
+              description: t("items.chat.description"),
               icon: MessageSquare,
               emoji: "💬",
             },
             {
               key: "channels" as OnboardingStepView,
-              title: "Connect a channel",
-              description: "See where your lobster can live outside the browser.",
+              title: t("items.channels.title"),
+              description: t("items.channels.description"),
               icon: Link2,
               emoji: "🔗",
             },
             {
               key: "skills" as OnboardingStepView,
-              title: "Add a skill",
-              description: "Browse the installable skills and add capability depth.",
+              title: t("items.skills.title"),
+              description: t("items.skills.description"),
               icon: Package,
               emoji: "📦",
             },
@@ -94,7 +97,7 @@ export function WorkspaceOnboarding({
           onClick={onSkip}
           className="mt-5 text-sm text-discord-muted transition-colors hover:text-foreground"
         >
-          Skip setup
+          {t("skip")}
         </button>
       </div>
     </div>

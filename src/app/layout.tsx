@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { AppProviders } from "@/components/app-providers";
 
 export const metadata: Metadata = {
   title: "ChatClaw — AI Agent Platform",
@@ -15,7 +16,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
-      <body className="font-sans antialiased">{children}</body>
+      <body className="font-sans antialiased">
+        <AppProviders>{children}</AppProviders>
+      </body>
     </html>
   );
 }

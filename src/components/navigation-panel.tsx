@@ -3,6 +3,7 @@
 import { useState } from "react";
 import {
   Brain,
+  CreditCard,
   ChevronDown,
   ChevronRight,
   House,
@@ -14,10 +15,14 @@ import {
   Trash2,
   Users,
 } from "lucide-react";
+import { useAuth } from "@/components/auth-provider";
 import { CreateAgentDialog } from "@/components/dialogs/create-agent-dialog";
 import { CreateTeamDialog } from "@/components/dialogs/create-team-dialog";
 import { AgentSettingsDialog } from "@/components/dialogs/agent-settings-dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useTranslations } from "@/i18n/provider";
 import { useStore } from "@/lib/store";
+import { pickUserAvatar, pickUserName } from "@/lib/supabase/shared";
 import { cn } from "@/lib/utils";
 import { getPrimaryAgent } from "@/lib/workspace";
 import type { Agent, WorkspaceView } from "@/types";
@@ -44,10 +49,13 @@ const NAV_ITEMS: Array<{
   { id: "channels", label: "Channels", emoji: "🔗", icon: Link2 },
   { id: "skills", label: "Skills", emoji: "📦", icon: Package },
   { id: "memory", label: "Memory", emoji: "🧠", icon: Brain },
+  { id: "pricing", label: "Pricing", emoji: "💳", icon: CreditCard },
   { id: "settings", label: "Settings", emoji: "⚙️", icon: Settings },
 ];
 
 export function NavigationPanel() {
+  const t = useTranslations("workspace");
+  const { user, profile, subscription } = useAuth();
   const { state, actions } = useStore();
   const [showDemoItems, setShowDemoItems] = useState(false);
   const [teamsOpen, setTeamsOpen] = useState(true);
@@ -62,11 +70,13 @@ export function NavigationPanel() {
   const demoAgents = companyAgents.filter((agent) => agent.id !== primaryAgent?.id);
   const companyTeams = state.teams.filter((team) => team.companyId === state.activeCompanyId);
   const isConnected = state.connectionStatus === "connected";
+  const userName = pickUserName(user, profile);
+  const userAvatar = pickUserAvatar(user, profile);
 
   if (!activeCompany) {
     return (
       <div className="flex h-full w-64 flex-col items-center justify-center bg-discord-mid px-6 text-center text-sm text-discord-muted">
-        Create your lobster from the main panel to start a personal workspace.
+        {t("empty")}
       </div>
     );
   }
@@ -128,7 +138,7 @@ export function NavigationPanel() {
                 )}
               >
                 <span className="text-base leading-none">{item.emoji}</span>
-                <span className="flex-1 text-left">{item.label}</span>
+                <span className="flex-1 text-left">{t(`nav.${item.id}`)}</span>
                 <Icon className="h-4 w-4 opacity-60" />
               </button>
             );
@@ -303,13 +313,27 @@ export function NavigationPanel() {
           onClick={() => setShowDemoItems((visible) => !visible)}
           className="flex w-full items-center justify-between rounded-xl border border-white/6 bg-black/10 px-3 py-2 text-xs font-medium text-discord-muted transition-colors hover:bg-white/[0.04] hover:text-sidebar-primary"
         >
-          <span>{showDemoItems ? "Hide demo agents" : "Show demo agents"}</span>
+          <span>{showDemoItems ? t("demo.hide") : t("demo.show")}</span>
           {showDemoItems ? (
             <ChevronDown className="h-3.5 w-3.5" />
           ) : (
             <ChevronRight className="h-3.5 w-3.5" />
           )}
         </button>
+        <div className="mt-3 rounded-xl border border-white/6 bg-black/10 p-3">
+          <div className="flex items-center gap-3">
+            <Avatar>
+              <AvatarImage src={userAvatar ?? undefined} alt={userName} />
+              <AvatarFallback>{userName.slice(0, 2).toUpperCase()}</AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium text-sidebar-primary">{userName}</p>
+              <p className="truncate text-[11px] text-discord-muted">
+                {subscription?.plan ? subscription.plan.toUpperCase() : "FREE"}
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <CreateAgentDialog open={showCreateAgent} onOpenChange={setShowCreateAgent} />

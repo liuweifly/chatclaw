@@ -1,0 +1,25 @@
+{
+  "common": {
+    "appName": "ChatClaw",
+    "operator": "操作员",
+    "loading": "加载中...",
+    "save": "保存",
+    "cancel": "取消",
+    "delete": "删除",
+    "upgrade": "升级",
+    "connected": "已连接",
+    "disconnected": "未连接",
+    "online": "在线",
+    "offline": "离线",
+    "optional": "可选",
+    "comingSoon": "即将推出",
+    "available": "可用",
+    "installed": "已安装",
+    "active": "已启用",
+    "inactive": "未启用",
+    "free": "免费",
+    "pro": "专业版",
+    "team": "团队版",
+    "month": "/月"
+  }
+}

@@ -1,237 +1,188 @@
 "use client";
 
 import {
-  Bot,
-  MessageSquare,
-  Brain,
-  Plug,
-  Clock,
-  Wrench,
   ArrowRight,
-  Zap,
-  Shield,
+  Bot,
+  Brain,
+  Clock,
   Globe,
+  Plug,
+  Shield,
+  Wrench,
+  Zap,
 } from "lucide-react";
+import { PricingPage } from "@/components/pricing-page";
+import { useTranslations } from "@/i18n/provider";
 
-const FEATURES = [
-  {
-    icon: Plug,
-    title: "Lives where you work",
-    desc: "Connect to Telegram, Feishu, Discord, Slack — not just a web tab.",
-  },
-  {
-    icon: Brain,
-    title: "Remembers everything",
-    desc: "Long-term memory across sessions. It knows your projects, preferences, and context.",
-  },
-  {
-    icon: Wrench,
-    title: "Actually does things",
-    desc: "Browses the web, reads docs, sends messages, runs scripts, manages files.",
-  },
-  {
-    icon: Clock,
-    title: "Always online",
-    desc: "Your lobster runs 24/7. Scheduled tasks, proactive alerts, background work.",
-  },
-  {
-    icon: Bot,
-    title: "Multi-agent teams",
-    desc: "Spin up specialists — coder, researcher, writer — and let them collaborate.",
-  },
-  {
-    icon: Shield,
-    title: "Your data, your rules",
-    desc: "Self-hosted runtime. No vendor lock-in. Full control over keys and config.",
-  },
-];
+const FEATURE_ICONS = [Plug, Brain, Wrench, Clock, Bot, Shield] as const;
 
-const COMPARE = [
-  { feature: "Persistent memory", us: true, them: false },
-  { feature: "Multi-channel (TG, Feishu, Discord)", us: true, them: false },
-  { feature: "Always-on (24/7 background)", us: true, them: false },
-  { feature: "Executes real tasks", us: true, them: false },
-  { feature: "Multi-agent collaboration", us: true, them: false },
-  { feature: "Self-hosted / full control", us: true, them: false },
-  { feature: "Chat with AI", us: true, them: true },
-];
+export function LandingPage({
+  onEnter,
+  isAuthenticated,
+}: {
+  onEnter: () => void;
+  isAuthenticated: boolean;
+}) {
+  const t = useTranslations("landing");
 
-export function LandingPage({ onEnter }: { onEnter: () => void }) {
   return (
     <div className="min-h-screen bg-[#1a1b1e] text-white">
-      {/* Nav */}
-      <nav className="flex items-center justify-between px-6 py-4 max-w-6xl mx-auto">
+      <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
         <div className="flex items-center gap-2">
           <span className="text-2xl">🦞</span>
-          <span className="font-bold text-lg">OpenClaw</span>
+          <span className="font-bold text-lg">ChatClaw</span>
         </div>
         <button
           onClick={onEnter}
-          className="rounded-full bg-[#5865f2] px-5 py-2 text-sm font-semibold hover:bg-[#4752c4] transition-colors"
+          className="rounded-full bg-[#5865f2] px-5 py-2 text-sm font-semibold transition-colors hover:bg-[#4752c4]"
         >
-          Try the demo
+          {isAuthenticated ? t("hero.goToWorkspace") : t("hero.tryDemo")}
         </button>
       </nav>
 
-      {/* Hero */}
-      <section className="relative overflow-hidden px-6 pt-20 pb-28 text-center">
+      <section className="relative overflow-hidden px-6 pb-28 pt-20 text-center">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(88,101,242,0.25),transparent_50%)]" />
-        <div className="relative max-w-3xl mx-auto">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-sm text-white/70 mb-6">
+        <div className="relative mx-auto max-w-3xl">
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-sm text-white/70">
             <Zap className="h-3.5 w-3.5" />
-            Not another chatbot
+            {t("hero.badge")}
           </div>
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold leading-[1.1] tracking-tight">
-            Your AI that{" "}
+          <h1 className="text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-5xl md:text-6xl">
+            {t("hero.titlePrefix")}{" "}
             <span className="bg-gradient-to-r from-[#5865f2] to-[#23a55a] bg-clip-text text-transparent">
-              actually works
+              {t("hero.titleAccent")}
             </span>
           </h1>
-          <p className="mt-6 text-lg sm:text-xl text-white/60 max-w-2xl mx-auto leading-relaxed">
-            Create a lobster — an AI operator that lives in your Telegram, Feishu, or Discord.
-            It remembers you, executes tasks, and runs 24/7. Not a chat window. A teammate.
+          <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-white/60 sm:text-xl">
+            {t("hero.description")}
           </p>
-          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <button
               onClick={onEnter}
-              className="flex items-center gap-2 rounded-full bg-[#5865f2] px-8 py-3.5 text-base font-semibold hover:bg-[#4752c4] transition-colors shadow-lg shadow-[#5865f2]/25"
+              className="flex items-center gap-2 rounded-full bg-[#5865f2] px-8 py-3.5 text-base font-semibold transition-colors hover:bg-[#4752c4] shadow-lg shadow-[#5865f2]/25"
             >
-              Create my lobster
+              {isAuthenticated ? t("hero.goToWorkspace") : t("hero.create")}
               <ArrowRight className="h-4 w-4" />
             </button>
-            <span className="text-sm text-white/40">Free demo · No signup required</span>
+            <span className="text-sm text-white/40">{t("hero.subline")}</span>
           </div>
         </div>
       </section>
 
-      {/* Why not ChatGPT */}
-      <section className="px-6 py-20 max-w-5xl mx-auto">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold">Why not just use ChatGPT?</h2>
-          <p className="mt-3 text-white/50 max-w-xl mx-auto">
-            ChatGPT is great for one-off questions. But it forgets you, can&apos;t reach your tools,
-            and goes offline when you close the tab.
-          </p>
+      <section className="mx-auto max-w-5xl px-6 py-20">
+        <div className="mb-12 text-center">
+          <h2 className="text-3xl font-bold">{t("comparison.title")}</h2>
+          <p className="mx-auto mt-3 max-w-xl text-white/50">{t("comparison.description")}</p>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full max-w-2xl mx-auto text-sm">
+          <table className="mx-auto w-full max-w-2xl text-sm">
             <thead>
               <tr className="border-b border-white/10">
-                <th className="text-left py-3 pr-4 text-white/50 font-medium">Feature</th>
-                <th className="py-3 px-4 text-center font-medium">
-                  <span className="text-lg">🦞</span> Lobster
+                <th className="py-3 pr-4 text-left font-medium text-white/50">
+                  {t("comparison.table.feature")}
                 </th>
-                <th className="py-3 pl-4 text-center font-medium text-white/50">ChatGPT</th>
+                <th className="px-4 py-3 text-center font-medium">
+                  <span className="text-lg">🦞</span> {t("comparison.table.us")}
+                </th>
+                <th className="py-3 pl-4 text-center font-medium text-white/50">
+                  {t("comparison.table.them")}
+                </th>
               </tr>
             </thead>
             <tbody>
-              {COMPARE.map((row) => (
-                <tr key={row.feature} className="border-b border-white/5">
-                  <td className="py-3 pr-4 text-white/70">{row.feature}</td>
-                  <td className="py-3 px-4 text-center">
-                    {row.us ? (
-                      <span className="text-[#23a55a] font-bold">✓</span>
-                    ) : (
-                      <span className="text-white/20">—</span>
-                    )}
-                  </td>
-                  <td className="py-3 pl-4 text-center">
-                    {row.them ? (
-                      <span className="text-white/40">✓</span>
-                    ) : (
-                      <span className="text-white/20">—</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
+              {[0, 1, 2, 3, 4, 5, 6].map((index) => {
+                const ours = index !== 6;
+                const theirs = index === 6;
+                return (
+                  <tr key={index} className="border-b border-white/5">
+                    <td className="py-3 pr-4 text-white/70">
+                      {t(`comparison.rows.${index}.label`)}
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      <span className={ours ? "font-bold text-[#23a55a]" : "text-white/20"}>
+                        {ours ? "✓" : "—"}
+                      </span>
+                    </td>
+                    <td className="py-3 pl-4 text-center">
+                      <span className={theirs ? "text-white/40" : "text-white/20"}>
+                        {theirs ? "✓" : "—"}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       </section>
 
-      {/* Features grid */}
-      <section className="px-6 py-20 max-w-5xl mx-auto">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold">What your lobster can do</h2>
-          <p className="mt-3 text-white/50">
-            It&apos;s not a chatbot. It&apos;s an operator.
-          </p>
+      <section className="mx-auto max-w-5xl px-6 py-20">
+        <div className="mb-12 text-center">
+          <h2 className="text-3xl font-bold">{t("features.title")}</h2>
+          <p className="mt-3 text-white/50">{t("features.description")}</p>
         </div>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map((f) => (
+          {FEATURE_ICONS.map((Icon, index) => (
             <div
-              key={f.title}
-              className="rounded-2xl border border-white/8 bg-white/[0.03] p-6 hover:border-white/15 transition-colors"
+              key={index}
+              className="rounded-2xl border border-white/8 bg-white/[0.03] p-6 transition-colors hover:border-white/15"
             >
-              <f.icon className="h-8 w-8 text-[#5865f2] mb-4" />
-              <h3 className="font-semibold text-base mb-2">{f.title}</h3>
-              <p className="text-sm text-white/50 leading-relaxed">{f.desc}</p>
+              <Icon className="mb-4 h-8 w-8 text-[#5865f2]" />
+              <h3 className="mb-2 font-semibold text-base">
+                {t(`features.items.${index}.title`)}
+              </h3>
+              <p className="text-sm leading-relaxed text-white/50">
+                {t(`features.items.${index}.description`)}
+              </p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* How it works */}
-      <section className="px-6 py-20 max-w-4xl mx-auto">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold">30 seconds to your first lobster</h2>
+      <section className="mx-auto max-w-4xl px-6 py-20">
+        <div className="mb-12 text-center">
+          <h2 className="text-3xl font-bold">{t("steps.title")}</h2>
         </div>
         <div className="grid gap-8 sm:grid-cols-3">
-          {[
-            {
-              step: "1",
-              title: "Name it",
-              desc: "Give your lobster a name and pick a role.",
-            },
-            {
-              step: "2",
-              title: "Chat with it",
-              desc: "Start talking immediately. Try a preset task or ask anything.",
-            },
-            {
-              step: "3",
-              title: "Connect channels",
-              desc: "Deploy to Telegram, Feishu, Discord — it goes where you work.",
-            },
-          ].map((s) => (
-            <div key={s.step} className="text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#5865f2]/20 text-[#5865f2] font-bold text-lg mb-4">
-                {s.step}
+          {[0, 1, 2].map((index) => (
+            <div key={index} className="text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#5865f2]/20 text-lg font-bold text-[#5865f2]">
+                {index + 1}
               </div>
-              <h3 className="font-semibold mb-2">{s.title}</h3>
-              <p className="text-sm text-white/50">{s.desc}</p>
+              <h3 className="mb-2 font-semibold">{t(`steps.items.${index}.title`)}</h3>
+              <p className="text-sm text-white/50">{t(`steps.items.${index}.description`)}</p>
             </div>
           ))}
         </div>
-        <div className="mt-12 text-center">
+      </section>
+
+      <section className="mx-auto max-w-6xl px-6 py-20">
+        <PricingPage embedded onRequireAuth={onEnter} />
+      </section>
+
+      <section className="mx-auto max-w-5xl px-6 py-12">
+        <div className="rounded-3xl border border-white/8 bg-white/[0.03] p-8 text-center">
+          <Globe className="mx-auto h-8 w-8 text-[#23a55a]" />
+          <h2 className="mt-4 text-2xl font-semibold">{t("cta.title")}</h2>
+          <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-white/50">
+            {t("cta.description")}
+          </p>
           <button
             onClick={onEnter}
-            className="inline-flex items-center gap-2 rounded-full bg-[#5865f2] px-8 py-3.5 text-base font-semibold hover:bg-[#4752c4] transition-colors shadow-lg shadow-[#5865f2]/25"
+            className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#5865f2] px-8 py-3.5 text-base font-semibold transition-colors hover:bg-[#4752c4] shadow-lg shadow-[#5865f2]/25"
           >
-            Create my lobster now
+            {isAuthenticated ? t("hero.goToWorkspace") : t("cta.button")}
             <ArrowRight className="h-4 w-4" />
           </button>
         </div>
       </section>
 
-      {/* Footer */}
       <footer className="border-t border-white/5 px-6 py-8 text-center text-sm text-white/30">
-        <div className="flex items-center justify-center gap-2 mb-2">
+        <div className="mb-2 flex items-center justify-center gap-2">
           <span className="text-lg">🦞</span>
-          <span className="font-semibold text-white/50">OpenClaw</span>
+          <span className="font-semibold text-white/50">ChatClaw</span>
         </div>
-        <p>
-          Powered by{" "}
-          <a
-            href="https://github.com/openclaw/openclaw"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-white/50 hover:text-white/70 underline underline-offset-2"
-          >
-            OpenClaw
-          </a>{" "}
-          · Open source AI agent runtime
-        </p>
+        <p>{t("footer")}</p>
       </footer>
     </div>
   );

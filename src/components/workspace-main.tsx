@@ -2,7 +2,8 @@
 
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { Bot, Brain, Link2, Package, Settings } from "lucide-react";
+import { Bot, Brain, CreditCard, Link2, Package, Settings } from "lucide-react";
+import { AuthModal } from "@/components/auth-modal";
 import { ChatArea } from "@/components/chat-area";
 import {
   ChannelsPanel,
@@ -10,7 +11,11 @@ import {
   SkillsPanel,
 } from "@/components/lobster-dashboard";
 import { LobsterOverview } from "@/components/lobster-overview";
+import { PricingPage } from "@/components/pricing-page";
+import { SettingsPage as WorkspaceSettingsPage } from "@/components/settings-page";
 import { WorkspaceOnboarding } from "@/components/workspace-onboarding";
+import { useAuth } from "@/components/auth-provider";
+import { useTranslations } from "@/i18n/provider";
 import { useStore } from "@/lib/store";
 import {
   dismissOnboarding,
@@ -51,25 +56,9 @@ function WorkspacePage({
   );
 }
 
-function SettingsPage() {
-  return (
-    <WorkspacePage
-      title="Settings"
-      description="Workspace-level configuration will live here."
-      icon={Settings}
-    >
-      <div className="max-w-2xl rounded-xl border border-white/6 bg-discord-mid p-6">
-        <h2 className="text-lg font-semibold text-foreground">Settings coming soon</h2>
-        <p className="mt-2 text-sm leading-6 text-discord-muted">
-          Gateway controls and deeper lobster configuration still exist in the current workspace,
-          and this page will become the dedicated home for them.
-        </p>
-      </div>
-    </WorkspacePage>
-  );
-}
-
 export function WorkspaceMain() {
+  const t = useTranslations("workspace");
+  const { user } = useAuth();
   const { state, actions } = useStore();
   const primaryAgent = getPrimaryAgent(state);
   const [onboardingState, setOnboardingState] = useState<LobsterOnboardingState | null>(null);
@@ -133,8 +122,8 @@ export function WorkspaceMain() {
     case "channels":
       content = (
         <WorkspacePage
-          title="Channels"
-          description="Connect your lobster to the places where work already happens."
+          title={t("views.channels.title")}
+          description={t("views.channels.description")}
           icon={Link2}
         >
           <ChannelsPanel />
@@ -144,8 +133,8 @@ export function WorkspaceMain() {
     case "skills":
       content = (
         <WorkspacePage
-          title="Skills"
-          description="Install focused abilities and integrations for your lobster."
+          title={t("views.skills.title")}
+          description={t("views.skills.description")}
           icon={Package}
         >
           <SkillsPanel />
@@ -155,16 +144,27 @@ export function WorkspaceMain() {
     case "memory":
       content = (
         <WorkspacePage
-          title="Memory"
-          description="Review the long-term context your lobster keeps across conversations."
+          title={t("views.memory.title")}
+          description={t("views.memory.description")}
           icon={Brain}
         >
           <MemoryPanel />
         </WorkspacePage>
       );
       break;
+    case "pricing":
+      content = (
+        <WorkspacePage
+          title={t("views.pricing.title")}
+          description={t("views.pricing.description")}
+          icon={CreditCard}
+        >
+          <PricingPage />
+        </WorkspacePage>
+      );
+      break;
     case "settings":
-      content = <SettingsPage />;
+      content = <WorkspaceSettingsPage onNavigate={navigateToView} />;
       break;
     case "chat":
     default:
@@ -175,6 +175,7 @@ export function WorkspaceMain() {
   return (
     <div className="relative flex min-w-0 flex-1">
       {content}
+      {!user && <AuthModal open={true} onOpenChange={() => undefined} />}
       {primaryAgent && onboardingState && !onboardingState.dismissed && (
         <WorkspaceOnboarding
           lobsterName={primaryAgent.name}

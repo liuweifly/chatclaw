@@ -9,6 +9,7 @@ import {
   Square,
   Users,
 } from "lucide-react";
+import { useAuth } from "@/components/auth-provider";
 import { useStore } from "@/lib/store";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { cn } from "@/lib/utils";
@@ -17,6 +18,7 @@ import {
   getAgentRoleLabel,
   initializeOnboardingState,
 } from "@/lib/workspace";
+import { useTranslations } from "@/i18n/provider";
 import type { Agent } from "@/types";
 
 function StreamingDots() {
@@ -74,6 +76,8 @@ function buildLobsterDescription(name: string, specialty: Agent["specialty"]) {
 }
 
 export function ChatArea() {
+  const t = useTranslations("workspace.chat");
+  const { user } = useAuth();
   const { state, dispatch, actions } = useStore();
   const [input, setInput] = useState("");
   const [composing, setComposing] = useState(false);
@@ -110,30 +114,30 @@ export function ChatArea() {
   const demoPrompts = target?.type === "team"
     ? [
         {
-          label: "🗓️ Run my day",
-          prompt: "Act as my executive operator. I have three meetings, two hours for deep work, and need to move a product demo forward. Build me a realistic schedule with clear priorities and time blocks.",
+          label: t("prompts.team.0.label"),
+          prompt: t("prompts.team.0.prompt"),
         },
         {
-          label: "🔍 Stress-test my idea",
-          prompt: "I want to build an AI operator that handles customer onboarding end-to-end. As a team, pressure-test this: what are the real strengths, hidden risks, and the one experiment I should run first?",
+          label: t("prompts.team.1.label"),
+          prompt: t("prompts.team.1.prompt"),
         },
         {
-          label: "🚀 Ship my demo",
-          prompt: "Work as a product team. I'm building a hosted OpenClaw demo. Tell me exactly what the landing page should promise, what the onboarding must do, and what would make a buyer say yes in five minutes.",
+          label: t("prompts.team.2.label"),
+          prompt: t("prompts.team.2.prompt"),
         },
       ]
     : [
         {
-          label: "🔍 Research a topic",
-          prompt: "Search the web for the latest news about AI agents and summarize the top 3 developments",
+          label: t("prompts.agent.0.label"),
+          prompt: t("prompts.agent.0.prompt"),
         },
         {
-          label: "📄 Analyze a document",
-          prompt: "I have a business plan I need feedback on. What questions should I answer before sharing it?",
+          label: t("prompts.agent.1.label"),
+          prompt: t("prompts.agent.1.prompt"),
         },
         {
-          label: "🧠 Remember this",
-          prompt: "Remember that my name is [user], I work on [project], and I prefer concise answers. Confirm what youve noted.",
+          label: t("prompts.agent.2.label"),
+          prompt: t("prompts.agent.2.prompt"),
         },
       ];
 
@@ -180,7 +184,7 @@ export function ChatArea() {
 
     const trimmedName = lobsterName.trim();
     if (!trimmedName) {
-      setCreationError("Name your lobster to continue.");
+      setCreationError(t("errors.nameRequired"));
       return;
     }
 
@@ -237,7 +241,7 @@ export function ChatArea() {
           gatewayToken,
           gatewayUrl
             ? `Personal demo workspace for ${trimmedName}.`
-            : `Personal workspace for ${trimmedName}. Connect a gateway to start chatting.`
+            : t("errors.gatewayHint", { name: trimmedName })
         );
 
         companyId = company.id;
@@ -249,7 +253,7 @@ export function ChatArea() {
       }
 
       if (!companyId) {
-        throw new Error("No workspace was available.");
+        throw new Error(t("errors.noWorkspace"));
       }
 
       const specialty = lobsterRole ?? "general";
@@ -260,6 +264,19 @@ export function ChatArea() {
         specialty,
       });
 
+      if (user) {
+        await fetch("/api/lobsters", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: trimmedName,
+            role: specialty,
+            agentId: nextAgent.id,
+            status: "active",
+          }),
+        }).catch(() => null);
+      }
+
       await actions.updateCompany(companyId, { defaultAgentId: nextAgent.id });
       initializeOnboardingState(nextAgent.id);
       await actions.selectChatTarget({ type: "agent", id: nextAgent.id });
@@ -267,12 +284,12 @@ export function ChatArea() {
       setLobsterRole(null);
     } catch (error) {
       setCreationError(
-        error instanceof Error ? error.message : "Could not create your lobster."
+        error instanceof Error ? error.message : t("errors.createFailed")
       );
     } finally {
       setCreatingLobster(false);
     }
-  }, [actions, creatingLobster, dispatch, lobsterName, lobsterRole, state.activeCompanyId]);
+  }, [actions, creatingLobster, dispatch, lobsterName, lobsterRole, state.activeCompanyId, user]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -287,7 +304,7 @@ export function ChatArea() {
   if (!state.initialized) {
     return (
       <div className="flex flex-1 h-full items-center justify-center bg-discord-light text-sm text-discord-muted">
-        Loading workspace...
+        {t("loading")}
       </div>
     );
   }
@@ -295,8 +312,8 @@ export function ChatArea() {
   // No target selected — empty state
   if (!target) {
     const secondaryLine = activeCompany
-      ? "Name it once, pick an optional role, and land directly in its chat."
-      : "We’ll create the workspace, set a default lobster, and drop you straight into chat.";
+      ? t("empty.secondaryExisting")
+      : t("empty.secondaryNew");
 
     return (
       <div className="relative flex flex-1 h-full items-center justify-center overflow-hidden bg-discord-light px-6 py-10">
@@ -306,37 +323,37 @@ export function ChatArea() {
             <div className="max-w-xl">
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/8 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-discord-muted">
                 <Sparkles className="h-3.5 w-3.5 text-discord-green" />
-                Personal workspace
+                {t("empty.badge")}
               </div>
               <h1 className="text-4xl font-semibold tracking-tight text-foreground">
-                Create your lobster in one short step.
+                {t("empty.title")}
               </h1>
               <p className="mt-3 max-w-lg text-sm leading-6 text-discord-muted">
                 {secondaryLine}
               </p>
               <div className="mt-6 flex flex-wrap gap-3 text-xs text-discord-muted">
                 <div className="rounded-full border border-white/8 bg-black/10 px-3 py-1.5">
-                  1-click setup
+                  {t("empty.tags.setup")}
                 </div>
                 <div className="rounded-full border border-white/8 bg-black/10 px-3 py-1.5">
-                  Personal default chat
+                  {t("empty.tags.defaultChat")}
                 </div>
                 <div className="rounded-full border border-white/8 bg-black/10 px-3 py-1.5">
-                  Guided setup
+                  {t("empty.tags.guided")}
                 </div>
               </div>
             </div>
             <div className="w-full max-w-sm rounded-3xl border border-white/8 bg-black/10 p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-discord-muted">
-                Start here
+                {t("empty.cardTitle")}
               </p>
               <p className="mt-2 text-sm leading-6 text-foreground">
-                Give it a name. Add a role if you want. Everything else stays available in the workspace.
+                {t("empty.cardDescription")}
               </p>
               <div className="mt-4 space-y-3">
                 <div>
                   <label className="text-xs font-semibold uppercase tracking-[0.18em] text-discord-muted">
-                    Name
+                    {t("empty.form.name")}
                   </label>
                   <input
                     value={lobsterName}
@@ -352,16 +369,16 @@ export function ChatArea() {
                         void handleCreateLobster();
                       }
                     }}
-                    placeholder="Atlas"
+                    placeholder={t("empty.form.namePlaceholder")}
                     className="mt-2 w-full rounded-2xl border border-white/8 bg-[#1f2126] px-4 py-3 text-sm text-foreground outline-none transition-colors placeholder:text-discord-muted focus:border-discord-blurple"
                   />
                 </div>
                 <div>
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-semibold uppercase tracking-[0.18em] text-discord-muted">
-                      Role
+                      <label className="text-xs font-semibold uppercase tracking-[0.18em] text-discord-muted">
+                      {t("empty.form.role")}
                     </label>
-                    <span className="text-[11px] text-discord-muted">Optional</span>
+                    <span className="text-[11px] text-discord-muted">{t("empty.form.optional")}</span>
                   </div>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {onboardingTemplates.map((template) => {
@@ -391,30 +408,30 @@ export function ChatArea() {
                 className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-discord-blurple px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-discord-blurple/85 disabled:cursor-wait disabled:opacity-70"
               >
                 {creatingLobster && <Loader2 className="h-4 w-4 animate-spin" />}
-                Create my lobster
+                {t("empty.form.submit")}
               </button>
               {creationError && (
                 <p className="mt-3 text-sm text-discord-red">{creationError}</p>
               )}
               {companyAgents.length > 0 && (
                 <p className="mt-3 text-xs leading-5 text-discord-muted">
-                  Demo agents stay available from the sidebar toggle when you need them.
+                  {t("empty.form.sidebarHint")}
                 </p>
               )}
             </div>
           </div>
           <div className="mt-8 grid gap-3 rounded-3xl border border-white/6 bg-black/10 p-4 text-sm text-discord-muted md:grid-cols-3">
             <div>
-              <p className="font-medium text-foreground">🗓️ Run my day</p>
-              <p className="mt-1">Get an operator-grade schedule in one prompt.</p>
+              <p className="font-medium text-foreground">{t("examples.0.title")}</p>
+              <p className="mt-1">{t("examples.0.description")}</p>
             </div>
             <div>
-              <p className="font-medium text-foreground">🔍 Stress-test my idea</p>
-              <p className="mt-1">Pressure-test a concept with strengths, risks, and next steps.</p>
+              <p className="font-medium text-foreground">{t("examples.1.title")}</p>
+              <p className="mt-1">{t("examples.1.description")}</p>
             </div>
             <div>
-              <p className="font-medium text-foreground">🚀 Ship my demo</p>
-              <p className="mt-1">Turn a vague plan into a concrete product story.</p>
+              <p className="font-medium text-foreground">{t("examples.2.title")}</p>
+              <p className="mt-1">{t("examples.2.description")}</p>
             </div>
           </div>
         </div>
@@ -423,18 +440,18 @@ export function ChatArea() {
   }
 
   const chatTitle = target.type === "agent"
-    ? (state.agentIdentities[target.id]?.name || targetAgent?.name || "Agent")
-    : (targetTeam?.name || "Team");
+    ? (state.agentIdentities[target.id]?.name || targetAgent?.name || t("agentFallback"))
+    : (targetTeam?.name || t("teamFallback"));
 
   const chatSubtitle = target.type === "agent"
     ? getAgentRoleLabel(targetAgent?.specialty)
     : `${teamAgents.length} agent${teamAgents.length !== 1 ? "s" : ""}`;
 
   const placeholder = !isConnected
-    ? "Gateway not connected..."
+    ? t("gatewayUnavailable")
     : target.type === "agent"
-    ? `Message ${chatTitle}`
-    : `Message ${chatTitle} team`;
+    ? t("placeholder.agent", { name: chatTitle })
+    : t("placeholder.team", { name: chatTitle });
   return (
     <div className="flex flex-1 h-full flex-col bg-discord-light">
       {/* Chat header */}
@@ -481,15 +498,18 @@ export function ChatArea() {
               )}
             </div>
             <p className="text-2xl font-bold text-foreground mb-1">
-              {target.type === "agent" ? `Hey! I'm ${chatTitle}` : `${chatTitle}`}
+              {target.type === "agent" ? t("intro.agentTitle", { name: chatTitle }) : chatTitle}
             </p>
             <p className="text-sm max-w-xl text-center leading-6">
               {target.type === "agent"
-                ? `Hey! I'm ${chatTitle}, your ${getAgentRoleLabel(targetAgent?.specialty)} lobster. I can browse the web, analyze documents, and remember everything we discuss.`
-                : targetTeam?.description || "Your specialist team is standing by."}
+                ? t("intro.agentBody", {
+                    name: chatTitle,
+                    role: getAgentRoleLabel(targetAgent?.specialty),
+                  })
+                : targetTeam?.description || t("intro.teamBody")}
             </p>
             <p className="mt-4 text-xs text-discord-muted">
-              Pick a task below or type anything to get started.
+              {t("intro.pickPrompt")}
             </p>
             <div className="mt-4 flex w-full max-w-2xl flex-wrap justify-center gap-3">
               {demoPrompts.map((demoPrompt) => (
@@ -548,7 +568,7 @@ export function ChatArea() {
                       isUser ? "text-discord-green" : "text-discord-blurple"
                     )}
                   >
-                    {isUser ? "You" : identity?.name || agent?.name || "Agent"}
+                    {isUser ? t("you") : identity?.name || agent?.name || t("agentFallback")}
                   </span>
                   <span className="text-[11px] text-discord-muted">{time}</span>
                 </div>
@@ -579,7 +599,7 @@ export function ChatArea() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline gap-2">
                   <span className="font-semibold text-[15px] text-discord-blurple">
-                    {identity?.name || agent?.name || "Agent"}
+                    {identity?.name || agent?.name || t("agentFallback")}
                   </span>
                   <StreamingDots />
                 </div>
@@ -587,7 +607,7 @@ export function ChatArea() {
                   {streaming.content ? (
                     <MarkdownRenderer content={streaming.content} />
                   ) : (
-                    <span className="text-discord-muted italic">Thinking...</span>
+                    <span className="text-discord-muted italic">{t("thinking")}</span>
                   )}
                 </div>
               </div>

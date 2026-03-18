@@ -1,0 +1,25 @@
+{
+  "common": {
+    "appName": "ChatClaw",
+    "operator": "Operator",
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "upgrade": "Upgrade",
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "online": "Online",
+    "offline": "Offline",
+    "optional": "Optional",
+    "comingSoon": "Coming soon",
+    "available": "Available",
+    "installed": "Installed",
+    "active": "Active",
+    "inactive": "Inactive",
+    "free": "Free",
+    "pro": "Pro",
+    "team": "Team",
+    "month": "/mo"
+  }
+}

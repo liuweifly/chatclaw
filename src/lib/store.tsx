@@ -8,6 +8,7 @@ import React, {
   useEffect,
   useRef,
 } from "react";
+import { useAuth } from "@/components/auth-provider";
 import { v4 as uuidv4 } from "uuid";
 import {
   getAllCompanies,
@@ -40,6 +41,7 @@ import type {
   ChatTargetType,
   WorkspaceView,
 } from "@/types";
+import type { LobsterRecord } from "@/lib/supabase/shared";
 
 // ── Session Key Helpers ────────────────────────────────────────────
 
@@ -264,11 +266,67 @@ const StoreContext = createContext<StoreContextValue | null>(null);
 // ── Provider ────────────────────────────────────────────────────────
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
   const [state, dispatch] = useReducer(reducer, initialState);
   const stateRef = useRef(state);
   stateRef.current = state;
   const gatewayRef = useRef<GatewayClient | null>(null);
   const pendingStreamResolvers = useRef<Map<string, () => void>>(new Map());
+
+  const mergeRemoteLobsters = useCallback(async (lobsters: LobsterRecord[]) => {
+    const current = stateRef.current;
+
+    for (const lobster of lobsters) {
+      const companyId = lobster.id;
+      const agentId = lobster.agent_id || `lobster-${lobster.id.slice(0, 8)}`;
+      const companyExists = current.companies.some((entry) => entry.id === companyId);
+      const agentExists = current.agents.some((entry) => entry.id === agentId);
+
+      const company: Company = {
+        id: companyId,
+        name: `${lobster.name} Workspace`,
+        description: `Hosted workspace for ${lobster.name}.`,
+        gatewayUrl: "",
+        gatewayToken: "",
+        defaultAgentId: agentId,
+        createdAt: Date.parse(lobster.created_at) || Date.now(),
+        updatedAt: Date.parse(lobster.updated_at) || Date.now(),
+      };
+
+      const agent: Agent = {
+        id: agentId,
+        companyId,
+        name: lobster.name,
+        description: `${lobster.name} lobster`,
+        specialty:
+          (lobster.role as AgentSpecialty | null) && [
+            "coding",
+            "research",
+            "writing",
+            "design",
+            "general",
+          ].includes(lobster.role as string)
+            ? (lobster.role as AgentSpecialty)
+            : "general",
+        createdAt: Date.parse(lobster.created_at) || Date.now(),
+      };
+
+      if (!companyExists) {
+        await dbCreateCompany(company);
+        dispatch({ type: "ADD_COMPANY", company });
+      }
+
+      if (!agentExists) {
+        await dbCreateAgent(agent);
+        dispatch({ type: "ADD_AGENT", agent });
+      }
+    }
+
+    const latest = stateRef.current;
+    if (!latest.activeCompanyId && lobsters[0]) {
+      void selectCompanyAction(lobsters[0].id);
+    }
+  }, []);
 
   // ── Resolve agentId from sessionKey ───────────────────────────
 
@@ -823,6 +881,35 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!state.initialized || !user) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function syncRemoteLobsters() {
+      try {
+        const response = await fetch("/api/lobsters", { cache: "no-store" });
+        if (!response.ok) {
+          return;
+        }
+        const payload = (await response.json()) as { lobsters: LobsterRecord[] };
+        if (!cancelled) {
+          await mergeRemoteLobsters(payload.lobsters);
+        }
+      } catch {
+        // Non-critical sync
+      }
+    }
+
+    void syncRemoteLobsters();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mergeRemoteLobsters, state.initialized, user]);
 
   // Connect gateway when company/config changes
   useEffect(() => {

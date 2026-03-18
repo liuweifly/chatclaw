@@ -6,6 +6,7 @@ import {
   Link2,
   Package,
 } from "lucide-react";
+import { useTranslations } from "@/i18n/provider";
 import { useStore } from "@/lib/store";
 import { CAPABILITIES } from "@/components/lobster-dashboard";
 import { cn } from "@/lib/utils";
@@ -13,40 +14,43 @@ import { getAgentRoleLabel, getPrimaryAgent } from "@/lib/workspace";
 import type { WorkspaceView } from "@/types";
 
 export function LobsterOverview({ onNavigate }: { onNavigate: (view: WorkspaceView) => void }) {
+  const t = useTranslations("workspace.overview");
   const { state } = useStore();
   const primaryAgent = getPrimaryAgent(state);
   const isConnected = state.connectionStatus === "connected";
   const activeCapabilities = CAPABILITIES.filter((capability) => capability.active);
   const createdLabel =
     primaryAgent && new Date(primaryAgent.createdAt).toDateString() === new Date().toDateString()
-      ? "Created today"
+      ? t("createdToday")
       : primaryAgent
-      ? `Created ${new Date(primaryAgent.createdAt).toLocaleDateString()}`
-      : "Create your lobster to begin";
+      ? t("createdOn", {
+          date: new Date(primaryAgent.createdAt).toLocaleDateString(),
+        })
+      : t("createToBegin");
 
   if (!primaryAgent) {
     return (
       <div className="flex h-full flex-col bg-discord-light">
         <div className="border-b border-white/6 px-6 py-5">
-          <h1 className="text-xl font-semibold text-foreground">Overview</h1>
+          <h1 className="text-xl font-semibold text-foreground">{t("title")}</h1>
           <p className="mt-1 text-sm text-discord-muted">
-            Your personal lobster will show up here once you create it.
+            {t("emptyDescription")}
           </p>
         </div>
         <div className="flex flex-1 items-center justify-center p-6">
           <div className="w-full max-w-xl rounded-xl border border-white/6 bg-discord-mid p-6 text-center">
             <div className="text-4xl">🦞</div>
             <h2 className="mt-4 text-lg font-semibold text-foreground">
-              No lobster yet
+              {t("emptyTitle")}
             </h2>
             <p className="mt-2 text-sm leading-6 text-discord-muted">
-              Jump into chat to create your lobster and start the workspace setup flow.
+              {t("emptyBody")}
             </p>
             <button
               onClick={() => onNavigate("chat")}
               className="mt-5 inline-flex items-center gap-2 rounded-xl bg-discord-blurple px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-discord-blurple/85"
             >
-              Open chat
+              {t("openChat")}
               <ArrowRight className="h-4 w-4" />
             </button>
           </div>
@@ -58,9 +62,9 @@ export function LobsterOverview({ onNavigate }: { onNavigate: (view: WorkspaceVi
   return (
     <div className="flex h-full flex-col bg-discord-light">
       <div className="border-b border-white/6 px-6 py-5">
-        <h1 className="text-xl font-semibold text-foreground">Overview</h1>
+        <h1 className="text-xl font-semibold text-foreground">{t("title")}</h1>
         <p className="mt-1 text-sm text-discord-muted">
-          Your lobster home page, setup shortcuts, and active capabilities.
+          {t("description")}
         </p>
       </div>
 
@@ -84,32 +88,32 @@ export function LobsterOverview({ onNavigate }: { onNavigate: (view: WorkspaceVi
                         : "bg-white/10 text-discord-muted"
                     )}
                   >
-                    {isConnected ? "Online" : "Offline"}
+                    {isConnected ? t("online") : t("offline")}
                   </span>
                 </div>
                 <p className="mt-1 text-sm text-discord-muted">
-                  {getAgentRoleLabel(primaryAgent.specialty)} lobster
+                  {t("roleLabel", { role: getAgentRoleLabel(primaryAgent.specialty) })}
                 </p>
                 <div className="mt-5 grid gap-3 sm:grid-cols-3">
                   <div className="rounded-xl border border-white/6 bg-black/10 p-3">
                     <p className="text-[11px] uppercase tracking-[0.18em] text-discord-muted">
-                      Status
+                      {t("stats.status")}
                     </p>
                     <p className="mt-2 text-sm font-medium text-foreground">
-                      {isConnected ? "Connected" : "Waiting on gateway"}
+                      {isConnected ? t("stats.connected") : t("stats.waiting")}
                     </p>
                   </div>
                   <div className="rounded-xl border border-white/6 bg-black/10 p-3">
                     <p className="text-[11px] uppercase tracking-[0.18em] text-discord-muted">
-                      Timeline
+                      {t("stats.timeline")}
                     </p>
                     <p className="mt-2 text-sm font-medium text-foreground">{createdLabel}</p>
                   </div>
                   <div className="rounded-xl border border-white/6 bg-black/10 p-3">
                     <p className="text-[11px] uppercase tracking-[0.18em] text-discord-muted">
-                      Chats
+                      {t("stats.chats")}
                     </p>
-                    <p className="mt-2 text-sm font-medium text-foreground">Syncing soon</p>
+                    <p className="mt-2 text-sm font-medium text-foreground">{t("stats.syncing")}</p>
                   </div>
                 </div>
               </div>
@@ -117,27 +121,27 @@ export function LobsterOverview({ onNavigate }: { onNavigate: (view: WorkspaceVi
           </section>
 
           <section className="rounded-xl border border-white/6 bg-discord-mid p-6">
-            <h2 className="text-lg font-semibold text-foreground">Quick Actions</h2>
+            <h2 className="text-lg font-semibold text-foreground">{t("quickActions.title")}</h2>
             <p className="mt-1 text-sm text-discord-muted">
-              Set up the workspace pieces new users usually need first.
+              {t("quickActions.description")}
             </p>
             <div className="mt-5 space-y-3">
               {[
                 {
-                  title: "Connect a channel",
-                  description: "Add Telegram, Feishu, Discord, or web chat entry points.",
+                  title: t("quickActions.items.channels.title"),
+                  description: t("quickActions.items.channels.description"),
                   icon: Link2,
                   view: "channels" as WorkspaceView,
                 },
                 {
-                  title: "Install a skill",
-                  description: "Give your lobster specialized tools and integrations.",
+                  title: t("quickActions.items.skills.title"),
+                  description: t("quickActions.items.skills.description"),
                   icon: Package,
                   view: "skills" as WorkspaceView,
                 },
                 {
-                  title: "View memory",
-                  description: "See what the lobster keeps across chats and sessions.",
+                  title: t("quickActions.items.memory.title"),
+                  description: t("quickActions.items.memory.description"),
                   icon: Brain,
                   view: "memory" as WorkspaceView,
                 },
@@ -166,29 +170,29 @@ export function LobsterOverview({ onNavigate }: { onNavigate: (view: WorkspaceVi
         <section className="mt-6 rounded-xl border border-white/6 bg-discord-mid p-6">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h2 className="text-lg font-semibold text-foreground">Capabilities</h2>
+              <h2 className="text-lg font-semibold text-foreground">{t("capabilities.title")}</h2>
               <p className="mt-1 text-sm text-discord-muted">
-                Active abilities available in this workspace right now.
+                {t("capabilities.description")}
               </p>
             </div>
             <span className="rounded-full bg-discord-blurple/20 px-2.5 py-1 text-[11px] font-semibold text-discord-blurple">
-              {activeCapabilities.length} active
+              {t("capabilities.activeCount", { count: activeCapabilities.length })}
             </span>
           </div>
           <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {activeCapabilities.map((capability) => (
               <div
-                key={capability.name}
+                key={capability.key}
                 className="rounded-xl border border-white/6 bg-black/10 p-4"
               >
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-discord-blurple/20 text-discord-blurple">
                   <capability.icon className="h-4 w-4" />
                 </div>
                 <p className="mt-3 text-sm font-semibold text-foreground">
-                  {capability.name}
+                  {t(`capabilities.items.${capability.key}.name`)}
                 </p>
                 <p className="mt-1 text-xs leading-5 text-discord-muted">
-                  {capability.desc}
+                  {t(`capabilities.items.${capability.key}.description`)}
                 </p>
               </div>
             ))}

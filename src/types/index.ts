@@ -48,6 +48,7 @@ export type WorkspaceView =
   | "channels"
   | "skills"
   | "memory"
+  | "pricing"
   | "settings";
 
 // ── Database Models ─────────────────────────────────────────────────

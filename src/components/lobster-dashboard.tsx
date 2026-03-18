@@ -12,103 +12,81 @@ import {
   Sparkles,
   Wrench,
 } from "lucide-react";
+import { useTranslations } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 
 export const CHANNELS = [
-  {
-    name: "Web Chat",
-    status: "connected" as const,
-    desc: "Chat directly in the browser.",
-    icon: "🌐",
-  },
-  {
-    name: "Telegram",
-    status: "available" as const,
-    desc: "Deploy your lobster as a Telegram bot.",
-    icon: "✈️",
-  },
-  {
-    name: "Feishu",
-    status: "available" as const,
-    desc: "Connect to Feishu (Lark) for team messaging.",
-    icon: "🐦",
-  },
-  {
-    name: "Discord",
-    status: "available" as const,
-    desc: "Add your lobster to any Discord server.",
-    icon: "🎮",
-  },
-  {
-    name: "Slack",
-    status: "coming_soon" as const,
-    desc: "Slack integration coming soon.",
-    icon: "💬",
-  },
+  { key: "web", status: "connected" as const, icon: "🌐" },
+  { key: "telegram", status: "available" as const, icon: "✈️" },
+  { key: "feishu", status: "available" as const, icon: "🐦" },
+  { key: "discord", status: "available" as const, icon: "🎮" },
+  { key: "slack", status: "coming_soon" as const, icon: "💬" },
 ];
 
 export const MEMORY_ITEMS = [
-  { key: "Long-term memory", value: "Persists across sessions. Your lobster remembers projects, preferences, and past decisions." },
-  { key: "Daily notes", value: "Auto-logged daily context — what happened, what was discussed, what to follow up on." },
-  { key: "User profile", value: "Knows your name, timezone, communication style, and working habits." },
-  { key: "Project context", value: "Tracks active projects, goals, deadlines, and key decisions." },
-];
+  "longTerm",
+  "dailyNotes",
+  "profile",
+  "projects",
+] as const;
 
 export const CAPABILITIES = [
-  { name: "Web browsing", desc: "Search and read web pages in real time.", active: true, icon: Search },
-  { name: "File management", desc: "Read, write, and organize files in the workspace.", active: true, icon: FileText },
-  { name: "Code execution", desc: "Run scripts, build projects, execute shell commands.", active: true, icon: Wrench },
-  { name: "Send messages", desc: "Proactively send messages to connected channels.", active: true, icon: Send },
-  { name: "Scheduled tasks", desc: "Cron jobs, reminders, periodic checks.", active: true, icon: Bot },
-  { name: "Image analysis", desc: "Analyze screenshots, photos, and diagrams.", active: true, icon: ImageIcon },
-  { name: "PDF reading", desc: "Extract and analyze content from PDF documents.", active: true, icon: Globe },
-  { name: "Email access", desc: "Read and send emails via connected accounts.", active: false, icon: Mail },
+  { key: "browsing", active: true, icon: Search },
+  { key: "files", active: true, icon: FileText },
+  { key: "code", active: true, icon: Wrench },
+  { key: "messaging", active: true, icon: Send },
+  { key: "scheduled", active: true, icon: Bot },
+  { key: "image", active: true, icon: ImageIcon },
+  { key: "pdf", active: true, icon: Globe },
+  { key: "email", active: false, icon: Mail },
 ];
 
 export const SKILLS = [
-  { name: "GitHub", desc: "Manage issues, PRs, and CI runs.", installed: true },
-  { name: "Google Workspace", desc: "Gmail, Calendar, Drive, Docs, Sheets.", installed: true },
-  { name: "Weather", desc: "Current weather and forecasts.", installed: true },
-  { name: "Web Search", desc: "AI-optimized web search.", installed: true },
-  { name: "Coding Agent", desc: "Delegate coding tasks to Codex / Claude Code.", installed: true },
-  { name: "SEO Toolkit", desc: "Site audits, content writing, keyword research.", installed: false },
-  { name: "Notion", desc: "Create and manage Notion pages and databases.", installed: false },
-  { name: "Analytics", desc: "Google Analytics 4 and Search Console.", installed: false },
+  { key: "github", installed: true },
+  { key: "googleWorkspace", installed: true },
+  { key: "weather", installed: true },
+  { key: "webSearch", installed: true },
+  { key: "codingAgent", installed: true },
+  { key: "seo", installed: false },
+  { key: "notion", installed: false },
+  { key: "analytics", installed: false },
 ];
 
 export function ChannelsPanel() {
+  const t = useTranslations("workspace.panels.channels");
+
   return (
     <div className="space-y-3">
-      {CHANNELS.map((ch) => (
+      {CHANNELS.map((channel) => (
         <div
-          key={ch.name}
+          key={channel.key}
           className="flex items-center gap-3 rounded-xl border border-white/6 bg-discord-mid p-3"
         >
-          <span className="text-xl">{ch.icon}</span>
-          <div className="flex-1 min-w-0">
+          <span className="text-xl">{channel.icon}</span>
+          <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-foreground">{ch.name}</span>
-              {ch.status === "connected" && (
-                <span className="rounded-full bg-[#23a55a]/20 px-2 py-0.5 text-[10px] font-semibold text-[#23a55a]">
-                  Connected
-                </span>
-              )}
-              {ch.status === "available" && (
-                <span className="rounded-full bg-discord-blurple/20 px-2 py-0.5 text-[10px] font-semibold text-discord-blurple">
-                  Available
-                </span>
-              )}
-              {ch.status === "coming_soon" && (
-                <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-discord-muted">
-                  Coming soon
-                </span>
-              )}
+              <span className="text-sm font-medium text-foreground">
+                {t(`items.${channel.key}.name`)}
+              </span>
+              <span
+                className={cn(
+                  "rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                  channel.status === "connected" && "bg-[#23a55a]/20 text-[#23a55a]",
+                  channel.status === "available" &&
+                    "bg-discord-blurple/20 text-discord-blurple",
+                  channel.status === "coming_soon" && "bg-white/10 text-discord-muted"
+                )}
+              >
+                {t(`statuses.${channel.status}`)}
+              </span>
             </div>
-            <p className="text-xs text-discord-muted mt-0.5">{ch.desc}</p>
+            <p className="mt-0.5 text-xs text-discord-muted">
+              {t(`items.${channel.key}.description`)}
+            </p>
           </div>
-          {ch.status === "available" && (
-            <button className="shrink-0 rounded-lg bg-discord-blurple px-3 py-1.5 text-xs font-semibold text-white hover:bg-discord-blurple/80 transition-colors">
-              Connect
+          {channel.status === "available" && (
+            <button className="shrink-0 rounded-lg bg-discord-blurple px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-discord-blurple/80">
+              {t("connect")}
             </button>
           )}
         </div>
@@ -118,65 +96,71 @@ export function ChannelsPanel() {
 }
 
 export function MemoryPanel() {
+  const t = useTranslations("workspace.panels.memory");
+
   return (
     <div className="space-y-3">
       {MEMORY_ITEMS.map((item) => (
         <div
-          key={item.key}
+          key={item}
           className="rounded-xl border border-white/6 bg-discord-mid p-3"
         >
-          <div className="flex items-center gap-2 mb-1">
+          <div className="mb-1 flex items-center gap-2">
             <Brain className="h-3.5 w-3.5 text-discord-blurple" />
-            <span className="text-sm font-medium text-foreground">{item.key}</span>
+            <span className="text-sm font-medium text-foreground">{t(`items.${item}.title`)}</span>
           </div>
-          <p className="text-xs text-discord-muted leading-5">{item.value}</p>
+          <p className="text-xs leading-5 text-discord-muted">{t(`items.${item}.description`)}</p>
         </div>
       ))}
       <div className="mt-4 rounded-xl border border-dashed border-white/10 bg-black/10 p-4 text-center">
-        <p className="text-xs text-discord-muted">
-          Memory grows as you chat. The more you use your lobster, the better it knows you.
-        </p>
+        <p className="text-xs text-discord-muted">{t("footer")}</p>
       </div>
     </div>
   );
 }
 
 export function CapabilitiesPanel() {
+  const t = useTranslations("workspace.panels.capabilities");
+
   return (
     <div className="space-y-3">
-      {CAPABILITIES.map((cap) => (
+      {CAPABILITIES.map((capability) => (
         <div
-          key={cap.name}
+          key={capability.key}
           className="flex items-center gap-3 rounded-xl border border-white/6 bg-discord-mid p-3"
         >
           <div
             className={cn(
               "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
-              cap.active ? "bg-[#23a55a]/20" : "bg-white/5"
+              capability.active ? "bg-[#23a55a]/20" : "bg-white/5"
             )}
           >
-            <Wrench
+            <capability.icon
               className={cn(
                 "h-4 w-4",
-                cap.active ? "text-[#23a55a]" : "text-discord-muted"
+                capability.active ? "text-[#23a55a]" : "text-discord-muted"
               )}
             />
           </div>
-          <div className="flex-1 min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-foreground">{cap.name}</span>
+              <span className="text-sm font-medium text-foreground">
+                {t(`items.${capability.key}.name`)}
+              </span>
               <span
                 className={cn(
                   "rounded-full px-2 py-0.5 text-[10px] font-semibold",
-                  cap.active
+                  capability.active
                     ? "bg-[#23a55a]/20 text-[#23a55a]"
                     : "bg-white/10 text-discord-muted"
                 )}
               >
-                {cap.active ? "Active" : "Inactive"}
+                {capability.active ? t("active") : t("inactive")}
               </span>
             </div>
-            <p className="text-xs text-discord-muted mt-0.5">{cap.desc}</p>
+            <p className="mt-0.5 text-xs text-discord-muted">
+              {t(`items.${capability.key}.description`)}
+            </p>
           </div>
         </div>
       ))}
@@ -185,11 +169,13 @@ export function CapabilitiesPanel() {
 }
 
 export function SkillsPanel() {
+  const t = useTranslations("workspace.panels.skills");
+
   return (
     <div className="space-y-3">
       {SKILLS.map((skill) => (
         <div
-          key={skill.name}
+          key={skill.key}
           className="flex items-center gap-3 rounded-xl border border-white/6 bg-discord-mid p-3"
         >
           <div
@@ -205,9 +191,11 @@ export function SkillsPanel() {
               )}
             />
           </div>
-          <div className="flex-1 min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-foreground">{skill.name}</span>
+              <span className="text-sm font-medium text-foreground">
+                {t(`items.${skill.key}.name`)}
+              </span>
               <span
                 className={cn(
                   "rounded-full px-2 py-0.5 text-[10px] font-semibold",
@@ -216,21 +204,23 @@ export function SkillsPanel() {
                     : "bg-white/10 text-discord-muted"
                 )}
               >
-                {skill.installed ? "Installed" : "Available"}
+                {skill.installed ? t("installed") : t("available")}
               </span>
             </div>
-            <p className="text-xs text-discord-muted mt-0.5">{skill.desc}</p>
+            <p className="mt-0.5 text-xs text-discord-muted">
+              {t(`items.${skill.key}.description`)}
+            </p>
           </div>
           {!skill.installed && (
-            <button className="shrink-0 rounded-lg bg-discord-blurple px-3 py-1.5 text-xs font-semibold text-white hover:bg-discord-blurple/80 transition-colors">
-              Install
+            <button className="shrink-0 rounded-lg bg-discord-blurple px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-discord-blurple/80">
+              {t("install")}
             </button>
           )}
         </div>
       ))}
       <div className="mt-4 rounded-xl border border-dashed border-white/10 bg-black/10 p-4 text-center">
         <p className="text-xs text-discord-muted">
-          Browse more skills at{" "}
+          {t("footerPrefix")}{" "}
           <a
             href="https://clawhub.com"
             target="_blank"
