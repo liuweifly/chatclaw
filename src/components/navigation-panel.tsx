@@ -118,7 +118,7 @@ export function NavigationPanel() {
               })}
               {companyTeams.length === 0 && (
                 <p className="px-2 py-1 text-[12px] text-discord-muted italic">
-                  No teams yet
+                  No teams yet — create one to demo multi-agent collaboration
                 </p>
               )}
             </div>
@@ -195,7 +195,7 @@ export function NavigationPanel() {
               })}
               {companyAgents.length === 0 && (
                 <p className="px-2 py-1 text-[12px] text-discord-muted italic">
-                  No agents yet
+                  No agents yet — add a specialist to make the demo stronger
                 </p>
               )}
             </div>

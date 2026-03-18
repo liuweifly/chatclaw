@@ -51,9 +51,9 @@ export function CreateTeamDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-discord-mid border-none text-foreground sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-xl">Create Team</DialogTitle>
+          <DialogTitle className="text-xl">Create Demo Team</DialogTitle>
           <p className="text-sm text-discord-muted">
-            Create a group chat with multiple agents.
+            Create a reusable multi-agent workflow for demos and collaboration.
           </p>
         </DialogHeader>
         <div className="space-y-4 py-2">
@@ -62,7 +62,7 @@ export function CreateTeamDialog({
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Dev Team"
+              placeholder="Product Team"
               className="mt-2 bg-discord-dark border-none text-foreground placeholder:text-discord-muted"
               onKeyDown={(e) => e.key === "Enter" && handleCreate()}
             />
@@ -72,7 +72,7 @@ export function CreateTeamDialog({
             <Input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="What does this team do?"
+              placeholder="What outcome should this team help with?"
               className="mt-2 bg-discord-dark border-none text-foreground placeholder:text-discord-muted"
             />
           </div>
@@ -107,7 +107,7 @@ export function CreateTeamDialog({
             </div>
           ) : (
             <p className="text-sm text-discord-muted italic">
-              Add agents first before creating a team.
+              Create a few specialist agents first, then combine them into a demo team.
             </p>
           )}
         </div>
@@ -117,7 +117,7 @@ export function CreateTeamDialog({
             disabled={!name.trim() || selectedAgentIds.length === 0}
             className="w-full bg-discord-blurple hover:bg-discord-blurple/80 text-white"
           >
-            Create Team
+            Create Demo Team
           </Button>
         </DialogFooter>
       </DialogContent>

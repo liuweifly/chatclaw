@@ -89,8 +89,8 @@ export function ChatArea() {
     return (
       <div className="flex flex-1 h-full flex-col items-center justify-center bg-discord-light text-discord-muted">
         <MessageCircle className="h-16 w-16 mb-4 opacity-20" />
-        <p className="text-xl font-semibold text-foreground mb-1">Welcome to ChatClaw</p>
-        <p className="text-sm">Select an agent for DM or a team for group chat</p>
+        <p className="text-xl font-semibold text-foreground mb-1">Welcome to your AI operator workspace</p>
+        <p className="text-sm">Pick an agent for 1:1 chat or a team for multi-agent collaboration</p>
       </div>
     );
   }
@@ -155,12 +155,12 @@ export function ChatArea() {
               )}
             </div>
             <p className="text-2xl font-bold text-foreground mb-1">
-              {target.type === "agent" ? `Chat with ${chatTitle}` : `${chatTitle} Team`}
+              {target.type === "agent" ? `Chat with ${chatTitle}` : `${chatTitle}`}
             </p>
             <p className="text-sm">
               {target.type === "agent"
                 ? targetAgent?.description || "Start a conversation"
-                : targetTeam?.description || "Group chat with your agents"}
+                : targetTeam?.description || "Multi-agent chat with your specialist team"}
             </p>
           </div>
         )}
