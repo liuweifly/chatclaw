@@ -3,14 +3,18 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import {
   Bot,
+  Loader2,
+  Rocket,
   Send,
+  Sparkles,
   Square,
   Users,
-  MessageCircle,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { cn } from "@/lib/utils";
+import { createAgent as dbCreateAgent } from "@/lib/db";
+import type { Agent } from "@/types";
 
 function StreamingDots() {
   return (
@@ -23,14 +27,19 @@ function StreamingDots() {
 }
 
 export function ChatArea() {
-  const { state, actions } = useStore();
+  const { state, dispatch, actions } = useStore();
   const [input, setInput] = useState("");
   const [composing, setComposing] = useState(false);
+  const [launching, setLaunching] = useState(false);
+  const [launchError, setLaunchError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const target = state.activeChatTarget;
   const isConnected = state.connectionStatus === "connected";
+  const companyAgents = state.activeCompanyId
+    ? state.agents.filter((agent) => agent.companyId === state.activeCompanyId)
+    : [];
 
   // Get chat target info
   const targetAgent = target?.type === "agent"
@@ -47,6 +56,36 @@ export function ChatArea() {
   const streamingEntries = Object.entries(state.streamingStates).filter(
     ([, s]) => target && s.targetType === target.type && s.targetId === target.id && s.isStreaming
   );
+  const isStreamingCurrentTarget = streamingEntries.length > 0;
+  const demoPrompts = target?.type === "team"
+    ? [
+        {
+          label: "Plan my day",
+          prompt: "Plan my day like an executive operator. I have three meetings, two hours for deep work, and need to move a product demo forward. Give me a realistic schedule with priorities.",
+        },
+        {
+          label: "Analyze an idea",
+          prompt: "Analyze this idea: an AI operator that can run customer onboarding. Give me the strengths, risks, and the first experiment I should run.",
+        },
+        {
+          label: "Multi-agent product advice",
+          prompt: "Work as a product team and pressure-test a hosted OpenClaw demo. What should the landing page promise, what should the onboarding do, and what would make a buyer believe it in five minutes?",
+        },
+      ]
+    : [
+        {
+          label: "Plan my day",
+          prompt: "Plan my day like an executive operator. I have three meetings, two hours for deep work, and need to move a product demo forward. Give me a realistic schedule with priorities.",
+        },
+        {
+          label: "Analyze an idea",
+          prompt: "Analyze this idea: an AI operator that can run customer onboarding. Give me the strengths, risks, and the first experiment I should run.",
+        },
+        {
+          label: "Product advice",
+          prompt: "Give me product advice for a hosted OpenClaw demo. What should the first-run experience emphasize, and how do I make value obvious in the first 30 seconds?",
+        },
+      ];
 
   // Auto-scroll
   useEffect(() => {
@@ -74,6 +113,107 @@ export function ChatArea() {
     actions.sendMessage(text);
   }, [input, target, actions]);
 
+  const handleDemoPrompt = useCallback(async (prompt: string) => {
+    if (!target) return;
+    if (isConnected && !isStreamingCurrentTarget) {
+      setInput("");
+      await actions.sendMessage(prompt);
+      return;
+    }
+
+    setInput(prompt);
+    textareaRef.current?.focus();
+  }, [actions, isConnected, isStreamingCurrentTarget, target]);
+
+  const handleLaunchLobster = useCallback(async () => {
+    if (launching) return;
+
+    setLaunching(true);
+    setLaunchError(null);
+
+    try {
+      let companyId = state.activeCompanyId;
+      let availableAgents = companyAgents;
+
+      const importGatewayAgents = async (
+        nextCompanyId: string,
+        gatewayAgents: Array<{ id: string; name: string }>
+      ) => {
+        const importedAgents: Agent[] = [];
+
+        for (const gatewayAgent of gatewayAgents) {
+          const importedAgent: Agent = {
+            id: gatewayAgent.id,
+            companyId: nextCompanyId,
+            name: gatewayAgent.name,
+            description: `Demo-ready OpenClaw operator: ${gatewayAgent.name}`,
+            specialty: "general",
+            createdAt: Date.now(),
+          };
+
+          await dbCreateAgent(importedAgent);
+          dispatch({ type: "ADD_AGENT", agent: importedAgent });
+          importedAgents.push(importedAgent);
+        }
+
+        return importedAgents;
+      };
+
+      if (!companyId || availableAgents.length === 0) {
+        const response = await fetch("/api/bootstrap", { cache: "no-store" });
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error("The hosted demo could not initialize.");
+        }
+
+        if (!companyId) {
+          if (!data?.found || !data?.gateway?.url || !data?.gateway?.token) {
+            throw new Error("No demo workspace was detected. Open gateway settings to connect one.");
+          }
+
+          const company = await actions.createCompany(
+            "Hosted OpenClaw Demo",
+            data.gateway.url,
+            data.gateway.token,
+            "Demo-ready AI operator workspace"
+          );
+
+          companyId = company.id;
+          await actions.selectCompany(company.id);
+          availableAgents = [];
+        }
+
+        if (companyId && availableAgents.length === 0 && Array.isArray(data?.agents) && data.agents.length > 0) {
+          availableAgents = await importGatewayAgents(companyId, data.agents);
+        }
+      }
+
+      let nextAgent = availableAgents[0] ?? null;
+
+      if (!companyId) {
+        throw new Error("No workspace was available.");
+      }
+
+      if (!nextAgent) {
+        nextAgent = await actions.createAgent({
+          companyId,
+          name: "Lobster",
+          description: "Demo-ready AI operator for planning, analysis, and product strategy.",
+          specialty: "general",
+        });
+      }
+
+      await actions.selectChatTarget({ type: "agent", id: nextAgent.id });
+    } catch (error) {
+      setLaunchError(
+        error instanceof Error ? error.message : "Could not launch your lobster."
+      );
+    } finally {
+      setLaunching(false);
+    }
+  }, [actions, companyAgents, dispatch, launching, state.activeCompanyId]);
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === "Enter" && !e.shiftKey && !composing) {
@@ -84,13 +224,92 @@ export function ChatArea() {
     [handleSend, composing]
   );
 
+  if (!state.initialized) {
+    return (
+      <div className="flex flex-1 h-full items-center justify-center bg-discord-light text-sm text-discord-muted">
+        Loading demo workspace...
+      </div>
+    );
+  }
+
   // No target selected — empty state
   if (!target) {
+    const primaryLabel = companyAgents.length > 0
+      ? "Launch your lobster"
+      : "Create your AI operator";
+    const secondaryLine = companyAgents.length > 0
+      ? "One click into a ready-to-chat operator."
+      : "We’ll create the workspace and drop you straight into chat.";
+
     return (
-      <div className="flex flex-1 h-full flex-col items-center justify-center bg-discord-light text-discord-muted">
-        <MessageCircle className="h-16 w-16 mb-4 opacity-20" />
-        <p className="text-xl font-semibold text-foreground mb-1">Welcome to your AI operator workspace</p>
-        <p className="text-sm">Pick an agent for 1:1 chat or a team for multi-agent collaboration</p>
+      <div className="relative flex flex-1 h-full items-center justify-center overflow-hidden bg-discord-light px-6 py-10">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(88,101,242,0.22),transparent_42%),radial-gradient(circle_at_bottom_right,rgba(35,165,90,0.12),transparent_32%)]" />
+        <div className="relative w-full max-w-3xl rounded-[28px] border border-white/6 bg-[#2a2d32]/95 p-8 shadow-[0_24px_80px_rgba(0,0,0,0.35)] backdrop-blur">
+          <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-xl">
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/8 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-discord-muted">
+                <Sparkles className="h-3.5 w-3.5 text-discord-green" />
+                Hosted demo
+              </div>
+              <h1 className="text-4xl font-semibold tracking-tight text-foreground">
+                Create your lobster and feel the value in under 30 seconds.
+              </h1>
+              <p className="mt-3 max-w-lg text-sm leading-6 text-discord-muted">
+                {secondaryLine}
+              </p>
+              <div className="mt-6 flex flex-wrap gap-3 text-xs text-discord-muted">
+                <div className="rounded-full border border-white/8 bg-black/10 px-3 py-1.5">
+                  1-click setup
+                </div>
+                <div className="rounded-full border border-white/8 bg-black/10 px-3 py-1.5">
+                  Ready-to-chat agent
+                </div>
+                <div className="rounded-full border border-white/8 bg-black/10 px-3 py-1.5">
+                  Preset demo prompts
+                </div>
+              </div>
+            </div>
+            <div className="w-full max-w-xs rounded-3xl border border-white/8 bg-black/10 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-discord-muted">
+                Start here
+              </p>
+              <p className="mt-2 text-sm leading-6 text-foreground">
+                {companyAgents.length > 0
+                  ? "Open your demo operator and start chatting immediately."
+                  : "We’ll use the demo gateway if it exists, otherwise create a fresh lobster for you."}
+              </p>
+              <button
+                onClick={handleLaunchLobster}
+                disabled={launching}
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-discord-blurple px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-discord-blurple/85 disabled:cursor-wait disabled:opacity-70"
+              >
+                {launching ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Rocket className="h-4 w-4" />
+                )}
+                {primaryLabel}
+              </button>
+              {launchError && (
+                <p className="mt-3 text-sm text-discord-red">{launchError}</p>
+              )}
+            </div>
+          </div>
+          <div className="mt-8 grid gap-3 rounded-3xl border border-white/6 bg-black/10 p-4 text-sm text-discord-muted md:grid-cols-3">
+            <div>
+              <p className="font-medium text-foreground">Plan your day</p>
+              <p className="mt-1">Generate an operator-grade schedule from one prompt.</p>
+            </div>
+            <div>
+              <p className="font-medium text-foreground">Analyze an idea</p>
+              <p className="mt-1">Pressure-test a concept with strengths, risks, and next steps.</p>
+            </div>
+            <div>
+              <p className="font-medium text-foreground">Product advice</p>
+              <p className="mt-1">Turn the demo into a concrete product story fast.</p>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -108,7 +327,6 @@ export function ChatArea() {
     : target.type === "agent"
     ? `Message ${chatTitle}`
     : `Message ${chatTitle} team`;
-
   return (
     <div className="flex flex-1 h-full flex-col bg-discord-light">
       {/* Chat header */}
@@ -146,8 +364,8 @@ export function ChatArea() {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         {state.messages.length === 0 && streamingEntries.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-discord-muted">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-discord-mid mb-4">
+          <div className="flex h-full flex-col items-center justify-center text-discord-muted">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-discord-mid">
               {target.type === "agent" ? (
                 <Bot className="h-8 w-8" />
               ) : (
@@ -162,6 +380,20 @@ export function ChatArea() {
                 ? targetAgent?.description || "Start a conversation"
                 : targetTeam?.description || "Multi-agent chat with your specialist team"}
             </p>
+            <div className="mt-6 flex w-full max-w-2xl flex-wrap justify-center gap-3">
+              {demoPrompts.map((demoPrompt) => (
+                <button
+                  key={demoPrompt.label}
+                  onClick={() => handleDemoPrompt(demoPrompt.prompt)}
+                  className="min-w-[180px] rounded-2xl border border-white/8 bg-discord-mid px-4 py-3 text-left transition-colors hover:bg-[#373941]"
+                >
+                  <p className="text-sm font-medium text-foreground">{demoPrompt.label}</p>
+                  <p className="mt-1 text-xs leading-5 text-discord-muted">
+                    {demoPrompt.prompt}
+                  </p>
+                </button>
+              ))}
+            </div>
           </div>
         )}
 

@@ -43,8 +43,8 @@ export function NavigationPanel() {
 
   if (!activeCompany) {
     return (
-      <div className="flex h-full w-60 flex-col bg-discord-mid items-center justify-center text-discord-muted text-sm">
-        Select or create a company
+      <div className="flex h-full w-60 flex-col items-center justify-center bg-discord-mid px-6 text-center text-sm text-discord-muted">
+        Launch your lobster from the main panel to create a demo workspace.
       </div>
     );
   }

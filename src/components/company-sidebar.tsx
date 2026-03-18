@@ -70,7 +70,7 @@ export function CompanySidebar() {
               </button>
             </TooltipTrigger>
             <TooltipContent side="right" className="bg-discord-darker border-none text-white font-semibold">
-              Add a Company
+              Add Workspace
             </TooltipContent>
           </Tooltip>
         </div>
