@@ -3,19 +3,20 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import {
   Bot,
-  LayoutDashboard,
   Loader2,
-  Rocket,
   Send,
   Sparkles,
   Square,
   Users,
 } from "lucide-react";
-import { LobsterDashboard } from "@/components/lobster-dashboard";
 import { useStore } from "@/lib/store";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { cn } from "@/lib/utils";
 import { createAgent as dbCreateAgent } from "@/lib/db";
+import {
+  getAgentRoleLabel,
+  initializeOnboardingState,
+} from "@/lib/workspace";
 import type { Agent } from "@/types";
 
 function StreamingDots() {
@@ -76,7 +77,6 @@ export function ChatArea() {
   const { state, dispatch, actions } = useStore();
   const [input, setInput] = useState("");
   const [composing, setComposing] = useState(false);
-  const [showDashboard, setShowDashboard] = useState(false);
   const [lobsterName, setLobsterName] = useState("");
   const [lobsterRole, setLobsterRole] = useState<Agent["specialty"] | null>(null);
   const [creatingLobster, setCreatingLobster] = useState(false);
@@ -124,16 +124,16 @@ export function ChatArea() {
       ]
     : [
         {
-          label: "🗓️ Run my day",
-          prompt: "Act as my executive operator. I have three meetings, two hours for deep work, and need to move a product demo forward. Build me a realistic schedule with clear priorities and time blocks.",
+          label: "🔍 Research a topic",
+          prompt: "Search the web for the latest news about AI agents and summarize the top 3 developments",
         },
         {
-          label: "🔍 Stress-test my idea",
-          prompt: "I want to build an AI operator that handles customer onboarding end-to-end. Pressure-test this: what are the real strengths, hidden risks, and the one experiment I should run first?",
+          label: "📄 Analyze a document",
+          prompt: "I have a business plan I need feedback on. What questions should I answer before sharing it?",
         },
         {
-          label: "🚀 Ship my demo",
-          prompt: "I'm building a hosted AI operator demo. Tell me exactly what the first-run experience should emphasize and how to make value obvious in the first 30 seconds. Be specific, not generic.",
+          label: "🧠 Remember this",
+          prompt: "Remember that my name is [user], I work on [project], and I prefer concise answers. Confirm what youve noted.",
         },
       ];
 
@@ -261,6 +261,7 @@ export function ChatArea() {
       });
 
       await actions.updateCompany(companyId, { defaultAgentId: nextAgent.id });
+      initializeOnboardingState(nextAgent.id);
       await actions.selectChatTarget({ type: "agent", id: nextAgent.id });
       setLobsterName("");
       setLobsterRole(null);
@@ -286,7 +287,7 @@ export function ChatArea() {
   if (!state.initialized) {
     return (
       <div className="flex flex-1 h-full items-center justify-center bg-discord-light text-sm text-discord-muted">
-        Loading demo workspace...
+        Loading workspace...
       </div>
     );
   }
@@ -305,7 +306,7 @@ export function ChatArea() {
             <div className="max-w-xl">
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/8 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-discord-muted">
                 <Sparkles className="h-3.5 w-3.5 text-discord-green" />
-                Hosted demo
+                Personal workspace
               </div>
               <h1 className="text-4xl font-semibold tracking-tight text-foreground">
                 Create your lobster in one short step.
@@ -321,7 +322,7 @@ export function ChatArea() {
                   Personal default chat
                 </div>
                 <div className="rounded-full border border-white/8 bg-black/10 px-3 py-1.5">
-                  Preset demo prompts
+                  Guided setup
                 </div>
               </div>
             </div>
@@ -397,7 +398,7 @@ export function ChatArea() {
               )}
               {companyAgents.length > 0 && (
                 <p className="mt-3 text-xs leading-5 text-discord-muted">
-                  Existing agents and teams stay in the sidebar for manual demos.
+                  Demo agents stay available from the sidebar toggle when you need them.
                 </p>
               )}
             </div>
@@ -426,7 +427,7 @@ export function ChatArea() {
     : (targetTeam?.name || "Team");
 
   const chatSubtitle = target.type === "agent"
-    ? targetAgent?.specialty
+    ? getAgentRoleLabel(targetAgent?.specialty)
     : `${teamAgents.length} agent${teamAgents.length !== 1 ? "s" : ""}`;
 
   const placeholder = !isConnected
@@ -450,21 +451,8 @@ export function ChatArea() {
             <span className="text-sm text-discord-muted truncate">{chatSubtitle}</span>
           </>
         )}
-        <button
-          onClick={() => setShowDashboard(!showDashboard)}
-          className={cn(
-            "ml-auto flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors",
-            showDashboard
-              ? "bg-discord-blurple text-white"
-              : "text-discord-muted hover:text-foreground hover:bg-white/5"
-          )}
-          title="Lobster Dashboard"
-        >
-          <LayoutDashboard className="h-3.5 w-3.5" />
-          Dashboard
-        </button>
         {target.type === "team" && teamAgents.length > 0 && (
-          <div className="flex -space-x-2">
+          <div className="ml-auto flex -space-x-2">
             {teamAgents.slice(0, 5).map((agent) => {
               const identity = state.agentIdentities[agent.id];
               return (
@@ -481,10 +469,6 @@ export function ChatArea() {
         )}
       </div>
 
-      {showDashboard ? (
-        <LobsterDashboard />
-      ) : (
-      <>
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         {state.messages.length === 0 && streamingEntries.length === 0 && (
@@ -497,11 +481,11 @@ export function ChatArea() {
               )}
             </div>
             <p className="text-2xl font-bold text-foreground mb-1">
-              {target.type === "agent" ? `${chatTitle} is ready` : `${chatTitle}`}
+              {target.type === "agent" ? `Hey! I'm ${chatTitle}` : `${chatTitle}`}
             </p>
-            <p className="text-sm max-w-md text-center">
+            <p className="text-sm max-w-xl text-center leading-6">
               {target.type === "agent"
-                ? targetAgent?.description || "Your lobster is online and waiting for instructions."
+                ? `Hey! I'm ${chatTitle}, your ${getAgentRoleLabel(targetAgent?.specialty)} lobster. I can browse the web, analyze documents, and remember everything we discuss.`
                 : targetTeam?.description || "Your specialist team is standing by."}
             </p>
             <p className="mt-4 text-xs text-discord-muted">
@@ -613,9 +597,6 @@ export function ChatArea() {
 
         <div ref={messagesEndRef} />
       </div>
-
-      </>
-      )}
       {/* Input area */}
       <div className="shrink-0 px-4 pb-6 pt-0">
         <div className="flex items-end gap-2 rounded-lg bg-[#383a40] px-4 py-2">

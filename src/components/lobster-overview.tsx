@@ -1,0 +1,200 @@
+"use client";
+
+import {
+  ArrowRight,
+  Brain,
+  Link2,
+  Package,
+} from "lucide-react";
+import { useStore } from "@/lib/store";
+import { CAPABILITIES } from "@/components/lobster-dashboard";
+import { cn } from "@/lib/utils";
+import { getAgentRoleLabel, getPrimaryAgent } from "@/lib/workspace";
+import type { WorkspaceView } from "@/types";
+
+export function LobsterOverview({ onNavigate }: { onNavigate: (view: WorkspaceView) => void }) {
+  const { state } = useStore();
+  const primaryAgent = getPrimaryAgent(state);
+  const isConnected = state.connectionStatus === "connected";
+  const activeCapabilities = CAPABILITIES.filter((capability) => capability.active);
+  const createdLabel =
+    primaryAgent && new Date(primaryAgent.createdAt).toDateString() === new Date().toDateString()
+      ? "Created today"
+      : primaryAgent
+      ? `Created ${new Date(primaryAgent.createdAt).toLocaleDateString()}`
+      : "Create your lobster to begin";
+
+  if (!primaryAgent) {
+    return (
+      <div className="flex h-full flex-col bg-discord-light">
+        <div className="border-b border-white/6 px-6 py-5">
+          <h1 className="text-xl font-semibold text-foreground">Overview</h1>
+          <p className="mt-1 text-sm text-discord-muted">
+            Your personal lobster will show up here once you create it.
+          </p>
+        </div>
+        <div className="flex flex-1 items-center justify-center p-6">
+          <div className="w-full max-w-xl rounded-xl border border-white/6 bg-discord-mid p-6 text-center">
+            <div className="text-4xl">🦞</div>
+            <h2 className="mt-4 text-lg font-semibold text-foreground">
+              No lobster yet
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-discord-muted">
+              Jump into chat to create your lobster and start the workspace setup flow.
+            </p>
+            <button
+              onClick={() => onNavigate("chat")}
+              className="mt-5 inline-flex items-center gap-2 rounded-xl bg-discord-blurple px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-discord-blurple/85"
+            >
+              Open chat
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-full flex-col bg-discord-light">
+      <div className="border-b border-white/6 px-6 py-5">
+        <h1 className="text-xl font-semibold text-foreground">Overview</h1>
+        <p className="mt-1 text-sm text-discord-muted">
+          Your lobster home page, setup shortcuts, and active capabilities.
+        </p>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-6">
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+          <section className="rounded-xl border border-white/6 bg-discord-mid p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-discord-blurple text-2xl">
+                🦞
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-3">
+                  <h2 className="text-2xl font-semibold text-foreground">
+                    {primaryAgent.name}
+                  </h2>
+                  <span
+                    className={cn(
+                      "rounded-full px-2.5 py-1 text-[11px] font-semibold",
+                      isConnected
+                        ? "bg-[#23a55a]/20 text-[#23a55a]"
+                        : "bg-white/10 text-discord-muted"
+                    )}
+                  >
+                    {isConnected ? "Online" : "Offline"}
+                  </span>
+                </div>
+                <p className="mt-1 text-sm text-discord-muted">
+                  {getAgentRoleLabel(primaryAgent.specialty)} lobster
+                </p>
+                <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-xl border border-white/6 bg-black/10 p-3">
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-discord-muted">
+                      Status
+                    </p>
+                    <p className="mt-2 text-sm font-medium text-foreground">
+                      {isConnected ? "Connected" : "Waiting on gateway"}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-white/6 bg-black/10 p-3">
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-discord-muted">
+                      Timeline
+                    </p>
+                    <p className="mt-2 text-sm font-medium text-foreground">{createdLabel}</p>
+                  </div>
+                  <div className="rounded-xl border border-white/6 bg-black/10 p-3">
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-discord-muted">
+                      Chats
+                    </p>
+                    <p className="mt-2 text-sm font-medium text-foreground">Syncing soon</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-xl border border-white/6 bg-discord-mid p-6">
+            <h2 className="text-lg font-semibold text-foreground">Quick Actions</h2>
+            <p className="mt-1 text-sm text-discord-muted">
+              Set up the workspace pieces new users usually need first.
+            </p>
+            <div className="mt-5 space-y-3">
+              {[
+                {
+                  title: "Connect a channel",
+                  description: "Add Telegram, Feishu, Discord, or web chat entry points.",
+                  icon: Link2,
+                  view: "channels" as WorkspaceView,
+                },
+                {
+                  title: "Install a skill",
+                  description: "Give your lobster specialized tools and integrations.",
+                  icon: Package,
+                  view: "skills" as WorkspaceView,
+                },
+                {
+                  title: "View memory",
+                  description: "See what the lobster keeps across chats and sessions.",
+                  icon: Brain,
+                  view: "memory" as WorkspaceView,
+                },
+              ].map((item) => (
+                <button
+                  key={item.title}
+                  onClick={() => onNavigate(item.view)}
+                  className="flex w-full items-center gap-4 rounded-xl border border-white/6 bg-black/10 p-4 text-left transition-colors hover:bg-white/[0.04]"
+                >
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-discord-blurple/20 text-discord-blurple">
+                    <item.icon className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-foreground">{item.title}</p>
+                    <p className="mt-1 text-xs leading-5 text-discord-muted">
+                      {item.description}
+                    </p>
+                  </div>
+                  <ArrowRight className="h-4 w-4 shrink-0 text-discord-muted" />
+                </button>
+              ))}
+            </div>
+          </section>
+        </div>
+
+        <section className="mt-6 rounded-xl border border-white/6 bg-discord-mid p-6">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">Capabilities</h2>
+              <p className="mt-1 text-sm text-discord-muted">
+                Active abilities available in this workspace right now.
+              </p>
+            </div>
+            <span className="rounded-full bg-discord-blurple/20 px-2.5 py-1 text-[11px] font-semibold text-discord-blurple">
+              {activeCapabilities.length} active
+            </span>
+          </div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {activeCapabilities.map((capability) => (
+              <div
+                key={capability.name}
+                className="rounded-xl border border-white/6 bg-black/10 p-4"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-discord-blurple/20 text-discord-blurple">
+                  <capability.icon className="h-4 w-4" />
+                </div>
+                <p className="mt-3 text-sm font-semibold text-foreground">
+                  {capability.name}
+                </p>
+                <p className="mt-1 text-xs leading-5 text-discord-muted">
+                  {capability.desc}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}

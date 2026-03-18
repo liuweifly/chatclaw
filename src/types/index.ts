@@ -42,6 +42,14 @@ export interface ChatTarget {
   id: string;
 }
 
+export type WorkspaceView =
+  | "overview"
+  | "chat"
+  | "channels"
+  | "skills"
+  | "memory"
+  | "settings";
+
 // ── Database Models ─────────────────────────────────────────────────
 
 export interface Company {
@@ -99,6 +107,7 @@ export interface AppState {
   // Selection
   activeCompanyId: string | null;
   activeChatTarget: ChatTarget | null;
+  activeView: WorkspaceView;
 
   // Gateway connection (shared)
   connectionStatus: ConnectionStatus;

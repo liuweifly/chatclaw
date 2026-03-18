@@ -38,6 +38,7 @@ import type {
   AgentSpecialty,
   ChatTarget,
   ChatTargetType,
+  WorkspaceView,
 } from "@/types";
 
 // ── Session Key Helpers ────────────────────────────────────────────
@@ -67,6 +68,7 @@ type Action =
   | { type: "UPDATE_TEAM"; id: string; updates: Partial<AgentTeam> }
   | { type: "REMOVE_TEAM"; id: string }
   | { type: "SET_ACTIVE_COMPANY"; id: string | null }
+  | { type: "SET_ACTIVE_VIEW"; view: WorkspaceView }
   | { type: "SET_CHAT_TARGET"; target: ChatTarget | null }
   | { type: "SET_MESSAGES"; messages: Message[] }
   | { type: "ADD_MESSAGE"; message: Message }
@@ -85,6 +87,7 @@ const initialState: AppState = {
   messages: [],
   activeCompanyId: null,
   activeChatTarget: null,
+  activeView: "chat",
   connectionStatus: "disconnected",
   agentIdentities: {},
   streamingStates: {},
@@ -154,6 +157,8 @@ function reducer(state: AppState, action: Action): AppState {
 
     case "SET_ACTIVE_COMPANY":
       return { ...state, activeCompanyId: action.id, activeChatTarget: null, messages: [] };
+    case "SET_ACTIVE_VIEW":
+      return { ...state, activeView: action.view };
     case "SET_CHAT_TARGET":
       return { ...state, activeChatTarget: action.target };
     case "SET_MESSAGES":
@@ -239,6 +244,7 @@ interface StoreActions {
   deleteTeam: (id: string) => Promise<void>;
 
   selectChatTarget: (target: ChatTarget) => Promise<void>;
+  setActiveView: (view: WorkspaceView) => void;
   sendMessage: (content: string) => Promise<void>;
   abortStreaming: (agentId: string) => Promise<void>;
 
@@ -591,9 +597,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const selectChatTargetAction = useCallback(async (target: ChatTarget) => {
+    dispatch({ type: "SET_ACTIVE_VIEW", view: "chat" });
     dispatch({ type: "SET_CHAT_TARGET", target });
     const msgs = await getMessagesByTarget(target.type, target.id);
     dispatch({ type: "SET_MESSAGES", messages: msgs });
+  }, []);
+
+  const setActiveViewAction = useCallback((view: WorkspaceView) => {
+    dispatch({ type: "SET_ACTIVE_VIEW", view });
   }, []);
 
   const sendMessageAction = useCallback(async (content: string) => {
@@ -834,6 +845,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     updateTeam: updateTeamAction,
     deleteTeam: deleteTeamAction,
     selectChatTarget: selectChatTargetAction,
+    setActiveView: setActiveViewAction,
     sendMessage: sendMessageAction,
     abortStreaming: abortStreamingAction,
     connectGateway,
