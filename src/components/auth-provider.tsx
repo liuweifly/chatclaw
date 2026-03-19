@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -49,13 +50,21 @@ function stripAuthParams(url: URL) {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const client = useMemo(() => createBrowserClient(), []);
+  const clientRef = useRef<ReturnType<typeof createBrowserClient> | null>(null);
   const setLocale = useSetLocale();
   const [session, setSession] = useState<SupabaseSession | null>(null);
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [profile, setProfile] = useState<ProfileRecord | null>(null);
   const [subscription, setSubscription] = useState<SubscriptionRecord | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const getClient = useCallback(() => {
+    if (!clientRef.current) {
+      clientRef.current = createBrowserClient();
+    }
+
+    return clientRef.current;
+  }, []);
 
   const clearAuthState = useCallback(() => {
     setSession(null);
@@ -108,6 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
+    const client = getClient();
 
     void (async () => {
       try {
@@ -135,27 +145,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       mounted = false;
     };
-  }, [client, persistSession, refreshAccount]);
+  }, [getClient, persistSession, refreshAccount]);
 
   const signInWithGoogle = useCallback(async () => {
+    const client = getClient();
     await client.auth.signInWithOAuth({
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/?workspace=1`,
       },
     });
-  }, [client]);
+  }, [getClient]);
 
   const signInWithPassword = useCallback(async (email: string, password: string) => {
+    const client = getClient();
     const { data, error } = await client.auth.signInWithPassword({ email, password });
     if (error) {
       throw error;
     }
     await persistSession(data.session);
     await refreshAccount();
-  }, [client, persistSession, refreshAccount]);
+  }, [getClient, persistSession, refreshAccount]);
 
   const signUpWithPassword = useCallback(async (email: string, password: string) => {
+    const client = getClient();
     const { data, error } = await client.auth.signUp({ email, password });
     if (error) {
       throw error;
@@ -173,13 +186,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       return { signedIn: false };
     }
-  }, [client, persistSession, refreshAccount, signInWithPassword]);
+  }, [getClient, persistSession, refreshAccount, signInWithPassword]);
 
   const signOut = useCallback(async () => {
+    const client = getClient();
     await client.auth.signOut().catch(() => null);
     await fetch("/api/auth/session", { method: "DELETE" }).catch(() => null);
     clearAuthState();
-  }, [clearAuthState, client]);
+  }, [clearAuthState, getClient]);
 
   const updateProfileLocale = useCallback(async (locale: string) => {
     const nextLocale = resolveLocale(locale);
@@ -202,6 +216,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [setLocale, user]);
 
   const deleteAccount = useCallback(async () => {
+    const client = getClient();
     const response = await fetch("/api/account", { method: "DELETE" });
     if (!response.ok) {
       throw new Error("Could not delete account");
@@ -209,7 +224,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await fetch("/api/auth/session", { method: "DELETE" }).catch(() => null);
     await client.auth.signOut().catch(() => null);
     clearAuthState();
-  }, [clearAuthState, client]);
+  }, [clearAuthState, getClient]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
