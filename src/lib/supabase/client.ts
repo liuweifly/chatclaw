@@ -24,6 +24,71 @@ type AuthListener = (event: AuthChangeEvent, session: SupabaseSession | null) =>
 interface AuthResponse {
   session: SupabaseSession | null;
   user: SupabaseUser | null;
+  weakPassword?: {
+    message?: string;
+    reasons?: string[];
+  };
+}
+
+interface RawAuthPayload {
+  access_token?: string;
+  refresh_token?: string;
+  expires_in?: number;
+  expires_at?: number;
+  token_type?: string;
+  user?: SupabaseUser | null;
+  weak_password?: {
+    message?: string;
+    reasons?: string[];
+  };
+  id?: string;
+  email?: string;
+  user_metadata?: SupabaseUser["user_metadata"];
+  app_metadata?: Record<string, unknown>;
+}
+
+function normalizeAuthResponse(payload: RawAuthPayload): AuthResponse {
+  const user =
+    payload.user ??
+    (typeof payload.id === "string"
+      ? {
+          id: payload.id,
+          email: payload.email,
+          user_metadata: payload.user_metadata,
+          app_metadata: payload.app_metadata,
+        }
+      : null);
+
+  const accessToken =
+    typeof payload.access_token === "string" ? payload.access_token : null;
+  const refreshToken =
+    typeof payload.refresh_token === "string" ? payload.refresh_token : null;
+  const hasSession = !!accessToken && !!refreshToken && !!user;
+
+  const expiresIn =
+    typeof payload.expires_in === "number" && Number.isFinite(payload.expires_in)
+      ? payload.expires_in
+      : 3600;
+
+  const session = hasSession
+    ? {
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        expires_in: expiresIn,
+        expires_at:
+          typeof payload.expires_at === "number" && Number.isFinite(payload.expires_at)
+            ? payload.expires_at
+            : Math.floor(Date.now() / 1000) + expiresIn,
+        token_type: payload.token_type ?? "bearer",
+        user,
+      }
+    : null;
+
+  return {
+    session,
+    user,
+    ...(payload.weak_password ? { weakPassword: payload.weak_password } : {}),
+  };
 }
 
 function setCookie(name: string, value: string, maxAgeSeconds: number) {
@@ -118,10 +183,17 @@ class BrowserSupabaseClient {
       email: string;
       password: string;
     }) => {
-      const data = await requestAuth<AuthResponse>("/auth/v1/token?grant_type=password", {
-        method: "POST",
-        body: JSON.stringify({ email, password }),
-      });
+      const payload = await requestAuth<RawAuthPayload>(
+        "/auth/v1/token?grant_type=password",
+        {
+          method: "POST",
+          body: JSON.stringify({ email, password }),
+        }
+      );
+      const data = normalizeAuthResponse(payload);
+      if (!data.session || !data.user) {
+        throw new Error("Supabase did not return a valid session.");
+      }
       this.setSession(data.session, "SIGNED_IN");
       return { data, error: null };
     },
@@ -132,10 +204,11 @@ class BrowserSupabaseClient {
       email: string;
       password: string;
     }) => {
-      const data = await requestAuth<AuthResponse>("/auth/v1/signup", {
+      const payload = await requestAuth<RawAuthPayload>("/auth/v1/signup", {
         method: "POST",
         body: JSON.stringify({ email, password }),
       });
+      const data = normalizeAuthResponse(payload);
       if (data.session) {
         this.setSession(data.session, "SIGNED_IN");
       }
@@ -161,15 +234,20 @@ class BrowserSupabaseClient {
         return { data: { session: null }, error: null };
       }
 
-      const payload = await requestAuth<AuthResponse>(
+      const payload = await requestAuth<RawAuthPayload>(
         "/auth/v1/token?grant_type=refresh_token",
         {
           method: "POST",
           body: JSON.stringify({ refresh_token: this.session.refresh_token }),
         }
       );
-      this.setSession(payload.session, "TOKEN_REFRESHED");
-      return { data: payload, error: null };
+      const data = normalizeAuthResponse(payload);
+      if (!data.session) {
+        this.setSession(null, "SIGNED_OUT");
+        return { data: { session: null, user: null }, error: null };
+      }
+      this.setSession(data.session, "TOKEN_REFRESHED");
+      return { data, error: null };
     },
     getUser: async () => {
       const token = this.session?.access_token;

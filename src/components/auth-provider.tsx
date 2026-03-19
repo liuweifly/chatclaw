@@ -114,19 +114,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signUpWithPassword = useCallback(async (email: string, password: string) => {
     const result = await client.auth.signUp({ email, password });
 
-    if (result.data.session?.user) {
+    if (result.data.session) {
       await refreshAccount();
       return { signedIn: true };
     }
 
     try {
-      await client.auth.signInWithPassword({ email, password });
-      await refreshAccount();
+      await signInWithPassword(email, password);
       return { signedIn: true };
     } catch {
       return { signedIn: false };
     }
-  }, [client, refreshAccount]);
+  }, [client, refreshAccount, signInWithPassword]);
 
   const signOut = useCallback(async () => {
     await client.auth.signOut();
