@@ -136,12 +136,11 @@ export async function POST(
       specialty,
     });
   } catch (error) {
-    await supabase.db.delete("lobster_agents", {
-      id: agentId,
-      user_id: user.id,
-      company_id: companyId,
+    console.warn("Failed to provision agent workspace", {
+      agentId,
+      companyId,
+      error,
     });
-    throw error;
   }
 
   if (!company.agent_id) {
