@@ -5,6 +5,7 @@ import {
   getSupabaseAnonKey,
   getSupabaseCookieOptions,
   getSupabaseUrl,
+  mergeSupabaseCookieOptions,
 } from "@/lib/supabase/shared";
 
 type FilterValue = string | number | boolean | null;
@@ -34,6 +35,15 @@ async function createAuthClient() {
       encode: "tokens-only",
       getAll: () =>
         cookieStore.getAll().map(({ name, value }) => ({ name, value })),
+      setAll: (cookiesToSet) => {
+        try {
+          for (const { name, value, options } of cookiesToSet) {
+            cookieStore.set(name, value, mergeSupabaseCookieOptions(options));
+          }
+        } catch {
+          // Server Components cannot always mutate cookies. Middleware handles refresh persistence.
+        }
+      },
     },
   });
 }
