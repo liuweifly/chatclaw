@@ -39,7 +39,8 @@
 - Prefer Conventional Commits such as `feat(...)`, `fix(...)`, `refactor(...)`, `chore(...)`, `docs(...)`, or `test(...)`.
 - Before editing, inspect the current worktree so pre-existing unrelated changes are known.
 - If unrelated changes already exist, do not blindly run `git add -A`.
-- When the worktree is dirty from unrelated work, auto-commit only the files owned by the current task. If ownership is ambiguous, stop and ask instead of risking a mixed commit.
+- Unrelated changes are not a blocker to auto-commit. Stage and commit only the files owned by the current task.
+- Ask only when the task boundary is ambiguous or the same file contains mixed changes that cannot be safely separated.
 - Do not auto-commit failed or partial work.
 - In the final response, report the commit message and short commit SHA when an automatic commit was created.
 
