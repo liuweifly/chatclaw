@@ -18,8 +18,23 @@ const defaultOnboardingState: LobsterOnboardingState = {
   },
 };
 
+const onboardingListeners = new Set<() => void>();
+
 function onboardingStorageKey(agentId: string) {
   return `chatclaw:onboarding:${agentId}`;
+}
+
+function emitOnboardingChange() {
+  for (const listener of onboardingListeners) {
+    listener();
+  }
+}
+
+export function subscribeOnboarding(listener: () => void) {
+  onboardingListeners.add(listener);
+  return () => {
+    onboardingListeners.delete(listener);
+  };
 }
 
 export function getPrimaryAgent(state: Pick<AppState, "companies" | "agents" | "activeCompanyId">): Agent | null {
@@ -85,6 +100,7 @@ export function initializeOnboardingState(agentId: string) {
     onboardingStorageKey(agentId),
     JSON.stringify(defaultOnboardingState)
   );
+  emitOnboardingChange();
 
   return defaultOnboardingState;
 }
@@ -95,6 +111,7 @@ export function writeOnboardingState(agentId: string, state: LobsterOnboardingSt
   }
 
   window.localStorage.setItem(onboardingStorageKey(agentId), JSON.stringify(state));
+  emitOnboardingChange();
   return state;
 }
 

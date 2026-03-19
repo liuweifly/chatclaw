@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Brain,
   Bot,
@@ -12,6 +13,7 @@ import {
   Sparkles,
   Wrench,
 } from "lucide-react";
+import { ChannelConnectDialog } from "@/components/channel-connect-dialog";
 import { useTranslations } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 
@@ -21,7 +23,7 @@ export const CHANNELS = [
   { key: "feishu", status: "available" as const, icon: "🐦" },
   { key: "discord", status: "available" as const, icon: "🎮" },
   { key: "slack", status: "coming_soon" as const, icon: "💬" },
-];
+] as const;
 
 export const MEMORY_ITEMS = [
   "longTerm",
@@ -52,46 +54,64 @@ export const SKILLS = [
   { key: "analytics", installed: false },
 ];
 
-export function ChannelsPanel() {
+export function ChannelsPanel({ onOpenSettings }: { onOpenSettings: () => void }) {
   const t = useTranslations("workspace.panels.channels");
+  const [selectedChannel, setSelectedChannel] = useState<"telegram" | "feishu" | "discord" | null>(null);
 
   return (
-    <div className="space-y-3">
-      {CHANNELS.map((channel) => (
-        <div
-          key={channel.key}
-          className="flex items-center gap-3 rounded-xl border border-white/6 bg-discord-mid p-3"
-        >
-          <span className="text-xl">{channel.icon}</span>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-foreground">
-                {t(`items.${channel.key}.name`)}
-              </span>
-              <span
-                className={cn(
-                  "rounded-full px-2 py-0.5 text-[10px] font-semibold",
-                  channel.status === "connected" && "bg-[#23a55a]/20 text-[#23a55a]",
-                  channel.status === "available" &&
-                    "bg-discord-blurple/20 text-discord-blurple",
-                  channel.status === "coming_soon" && "bg-white/10 text-discord-muted"
-                )}
-              >
-                {t(`statuses.${channel.status}`)}
-              </span>
+    <>
+      <div className="space-y-3">
+        {CHANNELS.map((channel) => (
+          <div
+            key={channel.key}
+            className="flex items-center gap-3 rounded-xl border border-white/6 bg-discord-mid p-3"
+          >
+            <span className="text-xl">{channel.icon}</span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-foreground">
+                  {t(`items.${channel.key}.name`)}
+                </span>
+                <span
+                  className={cn(
+                    "rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                    channel.status === "connected" && "bg-[#23a55a]/20 text-[#23a55a]",
+                    channel.status === "available" &&
+                      "bg-discord-blurple/20 text-discord-blurple",
+                    channel.status === "coming_soon" && "bg-white/10 text-discord-muted"
+                  )}
+                >
+                  {t(`statuses.${channel.status}`)}
+                </span>
+              </div>
+              <p className="mt-0.5 text-xs text-discord-muted">
+                {t(`items.${channel.key}.description`)}
+              </p>
             </div>
-            <p className="mt-0.5 text-xs text-discord-muted">
-              {t(`items.${channel.key}.description`)}
-            </p>
+            {channel.status === "available" && (
+              <button
+                type="button"
+                onClick={() => setSelectedChannel(channel.key)}
+                className="shrink-0 rounded-lg bg-discord-blurple px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-discord-blurple/80"
+              >
+                {t("connect")}
+              </button>
+            )}
           </div>
-          {channel.status === "available" && (
-            <button className="shrink-0 rounded-lg bg-discord-blurple px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-discord-blurple/80">
-              {t("connect")}
-            </button>
-          )}
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+
+      <ChannelConnectDialog
+        channel={selectedChannel}
+        open={selectedChannel !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedChannel(null);
+          }
+        }}
+        onOpenSettings={onOpenSettings}
+      />
+    </>
   );
 }
 

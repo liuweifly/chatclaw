@@ -2,6 +2,7 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -44,7 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [subscription, setSubscription] = useState<SubscriptionRecord | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const refreshAccount = async () => {
+  const refreshAccount = useCallback(async () => {
     const response = await fetch("/api/account", { cache: "no-store" });
     if (!response.ok) {
       if (response.status === 401) {
@@ -60,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (payload.profile?.locale === "en" || payload.profile?.locale === "zh") {
       setLocale(payload.profile.locale);
     }
-  };
+  }, [setLocale]);
 
   useEffect(() => {
     let mounted = true;
@@ -75,7 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     });
 
-    const subscription = client.auth.onAuthStateChange((_event, nextSession) => {
+    const authSubscription = client.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
       if (nextSession?.user) {
@@ -88,8 +89,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       mounted = false;
-      subscription.data.subscription.unsubscribe();
+      authSubscription.data.subscription.unsubscribe();
     };
+  }, [client, refreshAccount]);
+
+  const signInWithGoogle = useCallback(async () => {
+    await client.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/?workspace=1`,
+      },
+    });
+  }, [client]);
+
+  const signInWithPassword = useCallback(async (email: string, password: string) => {
+    await client.auth.signInWithPassword({ email, password });
+    await refreshAccount();
+  }, [client, refreshAccount]);
+
+  const signUpWithPassword = useCallback(async (email: string, password: string) => {
+    await client.auth.signUp({ email, password });
+    await refreshAccount();
+  }, [client, refreshAccount]);
+
+  const signOut = useCallback(async () => {
+    await client.auth.signOut();
+    setProfile(null);
+    setSubscription(null);
+  }, [client]);
+
+  const updateProfileLocale = useCallback(async (locale: string) => {
+    const response = await fetch("/api/account", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ locale }),
+    });
+    if (response.ok) {
+      const payload = (await response.json()) as AccountPayload;
+      setProfile(payload.profile);
+      setSubscription(payload.subscription);
+      setLocale(locale === "zh" ? "zh" : "en");
+    }
+  }, [setLocale]);
+
+  const deleteAccount = useCallback(async () => {
+    const response = await fetch("/api/account", { method: "DELETE" });
+    if (!response.ok) {
+      throw new Error("Could not delete account");
+    }
+    await client.auth.signOut();
   }, [client]);
 
   const value = useMemo<AuthContextValue>(
@@ -99,50 +147,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       profile,
       subscription,
       loading,
-      signInWithGoogle: async () => {
-        await client.auth.signInWithOAuth({
-          provider: "google",
-          options: {
-            redirectTo: `${window.location.origin}/?workspace=1`,
-          },
-        });
-      },
-      signInWithPassword: async (email, password) => {
-        await client.auth.signInWithPassword({ email, password });
-        await refreshAccount();
-      },
-      signUpWithPassword: async (email, password) => {
-        await client.auth.signUp({ email, password });
-        await refreshAccount();
-      },
-      signOut: async () => {
-        await client.auth.signOut();
-        setProfile(null);
-        setSubscription(null);
-      },
+      signInWithGoogle,
+      signInWithPassword,
+      signUpWithPassword,
+      signOut,
       refreshAccount,
-      updateProfileLocale: async (locale) => {
-        const response = await fetch("/api/account", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ locale }),
-        });
-        if (response.ok) {
-          const payload = (await response.json()) as AccountPayload;
-          setProfile(payload.profile);
-          setSubscription(payload.subscription);
-          setLocale(locale === "zh" ? "zh" : "en");
-        }
-      },
-      deleteAccount: async () => {
-        const response = await fetch("/api/account", { method: "DELETE" });
-        if (!response.ok) {
-          throw new Error("Could not delete account");
-        }
-        await client.auth.signOut();
-      },
+      updateProfileLocale,
+      deleteAccount,
     }),
-    [client, loading, profile, session, subscription, user]
+    [
+      deleteAccount,
+      loading,
+      profile,
+      refreshAccount,
+      session,
+      signInWithGoogle,
+      signInWithPassword,
+      signOut,
+      signUpWithPassword,
+      subscription,
+      updateProfileLocale,
+      user,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

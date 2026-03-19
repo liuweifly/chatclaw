@@ -181,15 +181,26 @@ export function createServerClient() {
         if (typeof options?.limit === "number") {
           params.set("limit", String(options.limit));
         }
-        return (await serviceFetch(
-          `/rest/v1/${table}${buildQuery(options?.filters, params)}`,
-          {
-            headers: options?.maybeSingle
-              ? { Accept: "application/vnd.pgrst.object+json" }
-              : undefined,
-          },
-          { useServiceKey: true }
-        )) as T;
+        try {
+          return (await serviceFetch(
+            `/rest/v1/${table}${buildQuery(options?.filters, params)}`,
+            {
+              headers: options?.maybeSingle
+                ? { Accept: "application/vnd.pgrst.object+json" }
+                : undefined,
+            },
+            { useServiceKey: true }
+          )) as T;
+        } catch (error) {
+          if (
+            options?.maybeSingle &&
+            error instanceof Error &&
+            error.message.includes("(406)")
+          ) {
+            return null as T;
+          }
+          throw error;
+        }
       },
       insert: async <T>(
         table: string,

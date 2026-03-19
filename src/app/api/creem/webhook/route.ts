@@ -14,13 +14,14 @@ function getWebhookSecret() {
 
 function verifySignature(payload: string, signature: string | null) {
   if (!signature) return false;
+  const normalized = signature.replace(/^sha256=/, "");
   const expected = crypto
     .createHmac("sha256", getWebhookSecret())
     .update(payload)
     .digest("hex");
 
   try {
-    return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
+    return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(normalized));
   } catch {
     return false;
   }

@@ -269,9 +269,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [state, dispatch] = useReducer(reducer, initialState);
   const stateRef = useRef(state);
-  stateRef.current = state;
   const gatewayRef = useRef<GatewayClient | null>(null);
   const pendingStreamResolvers = useRef<Map<string, () => void>>(new Map());
+
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
 
   const mergeRemoteLobsters = useCallback(async (lobsters: LobsterRecord[]) => {
     const current = stateRef.current;
@@ -324,7 +327,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
     const latest = stateRef.current;
     if (!latest.activeCompanyId && lobsters[0]) {
-      void selectCompanyAction(lobsters[0].id);
+      const firstLobster = lobsters[0];
+      const firstAgentId = firstLobster.agent_id || `lobster-${firstLobster.id.slice(0, 8)}`;
+      dispatch({ type: "SET_ACTIVE_COMPANY", id: firstLobster.id });
+      dispatch({
+        type: "SET_CHAT_TARGET",
+        target: { type: "agent", id: firstAgentId },
+      });
     }
   }, []);
 
@@ -715,7 +724,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         })
         .join("\n\n");
 
-      let currentRoundReplies: Array<{ agentName: string; content: string }> = [];
+      const currentRoundReplies: Array<{ agentName: string; content: string }> = [];
 
       for (const agentId of team.agentIds) {
         const sessionKey = teamSessionKey(agentId, target.id);
@@ -918,7 +927,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     if (company?.gatewayUrl && company?.gatewayToken) {
       connectGateway();
     }
-  }, [state.initialized, state.activeCompanyId, connectGateway]);
+  }, [connectGateway, state.activeCompanyId, state.companies, state.initialized]);
 
   const actions: StoreActions = {
     createCompany: createCompanyAction,

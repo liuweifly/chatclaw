@@ -289,7 +289,7 @@ export function ChatArea() {
     } finally {
       setCreatingLobster(false);
     }
-  }, [actions, creatingLobster, dispatch, lobsterName, lobsterRole, state.activeCompanyId, user]);
+  }, [actions, creatingLobster, dispatch, lobsterName, lobsterRole, state.activeCompanyId, t, user]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {

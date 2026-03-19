@@ -21,5 +21,409 @@
     "pro": "Pro",
     "team": "Team",
     "month": "/mo"
+  },
+  "auth": {
+    "title": "Sign in to ChatClaw",
+    "description": "Use Google or email to unlock your workspace, billing, and saved lobsters.",
+    "google": "Continue with Google",
+    "or": "or",
+    "signIn": "Sign in",
+    "signUp": "Sign up",
+    "signInCta": "Sign in",
+    "signUpCta": "Create account",
+    "email": "Email",
+    "password": "Password",
+    "logout": "Log out",
+    "missingFields": "Enter both email and password.",
+    "genericError": "Authentication failed."
+  },
+  "pricing": {
+    "eyebrow": "Pricing",
+    "title": "Choose the plan that matches your lobster",
+    "description": "Start free, then unlock more lobsters, channels, and collaboration when the workspace is ready.",
+    "popular": "Most popular",
+    "forever": "forever",
+    "perMonth": "per month",
+    "currentPlan": "Current plan",
+    "free": {
+      "name": "Free",
+      "summary": "For trying the product and a single personal lobster.",
+      "cta": "Current plan",
+      "features": {
+        "0": "1 lobster",
+        "1": "Web chat only",
+        "2": "50 messages per day",
+        "3": "Basic workspace setup"
+      }
+    },
+    "pro": {
+      "name": "Pro",
+      "summary": "For operators who want multiple lobsters and every channel.",
+      "cta": "Upgrade to Pro",
+      "features": {
+        "0": "3 lobsters",
+        "1": "All channels",
+        "2": "Unlimited messages",
+        "3": "All skills"
+      }
+    },
+    "team": {
+      "name": "Team",
+      "summary": "For multi-lobster work with collaboration and faster support.",
+      "cta": "Upgrade to Team",
+      "features": {
+        "0": "10 lobsters",
+        "1": "Team collaboration",
+        "2": "Priority support",
+        "3": "Everything in Pro"
+      }
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "description": "Manage your account, language, and billing from one place.",
+    "plan": {
+      "title": "Current plan",
+      "free": "Free plan",
+      "pro": "Pro plan",
+      "team": "Team plan",
+      "upgrade": "Upgrade plan"
+    },
+    "language": {
+      "title": "Language",
+      "description": "Choose the language used across the product."
+    },
+    "session": {
+      "title": "Session",
+      "description": "Sign out of this browser session.",
+      "logout": "Log out"
+    },
+    "danger": {
+      "title": "Danger zone",
+      "description": "Delete your account and remove access to this workspace.",
+      "delete": "Delete account",
+      "confirm": "Delete your ChatClaw account? This cannot be undone."
+    }
+  },
+  "landing": {
+    "hero": {
+      "badge": "Not another chatbot",
+      "titlePrefix": "Your AI that",
+      "titleAccent": "actually works",
+      "description": "Create a lobster, an always-on AI operator that lives in Telegram, Feishu, Discord, and the browser.",
+      "tryDemo": "Try the demo",
+      "create": "Create my lobster",
+      "goToWorkspace": "Go to workspace",
+      "subline": "Free demo · Auth required to save your workspace"
+    },
+    "comparison": {
+      "title": "Why not just use ChatGPT?",
+      "description": "ChatClaw stays connected to your tools, remembers context, and can keep working after you close the tab.",
+      "table": {
+        "feature": "Feature",
+        "us": "Lobster",
+        "them": "ChatGPT"
+      },
+      "rows": {
+        "0": { "label": "Persistent memory" },
+        "1": { "label": "Multi-channel deployment" },
+        "2": { "label": "Always-on background work" },
+        "3": { "label": "Executes real tasks" },
+        "4": { "label": "Multi-agent collaboration" },
+        "5": { "label": "Self-hosted control" },
+        "6": { "label": "Chat with AI" }
+      }
+    },
+    "features": {
+      "title": "What your lobster can do",
+      "description": "It is an operator, not just a chat window.",
+      "items": {
+        "0": { "title": "Lives where you work", "description": "Connect to Telegram, Feishu, Discord, and Slack." },
+        "1": { "title": "Remembers everything", "description": "Long-term memory across projects, preferences, and sessions." },
+        "2": { "title": "Actually does things", "description": "Browse the web, run scripts, manage docs, and move work forward." },
+        "3": { "title": "Always online", "description": "Run 24/7 with alerts, schedules, and background execution." },
+        "4": { "title": "Multi-agent teams", "description": "Spin up specialists and have them collaborate on one task." },
+        "5": { "title": "Your data, your rules", "description": "Keep control over keys, runtime, and deployment." }
+      }
+    },
+    "steps": {
+      "title": "30 seconds to your first lobster",
+      "items": {
+        "0": { "title": "Name it", "description": "Give it a name and choose an optional role." },
+        "1": { "title": "Chat with it", "description": "Start with a preset or ask it to help with real work." },
+        "2": { "title": "Connect channels", "description": "Deploy it to the places where work already happens." }
+      }
+    },
+    "cta": {
+      "title": "Build a real AI workspace, not another empty chat tab",
+      "description": "Auth, pricing, channels, memory, and workspace settings are ready to grow with the product.",
+      "button": "Create my lobster now"
+    },
+    "footer": "Powered by OpenClaw and designed for hosted AI agent workspaces."
+  },
+  "workspace": {
+    "empty": "Create your lobster from the main panel to start a personal workspace.",
+    "nav": {
+      "overview": "Overview",
+      "chat": "Chat",
+      "channels": "Channels",
+      "skills": "Skills",
+      "memory": "Memory",
+      "pricing": "Pricing",
+      "settings": "Settings"
+    },
+    "demo": {
+      "show": "Show demo agents",
+      "hide": "Hide demo agents"
+    },
+    "views": {
+      "channels": {
+        "title": "Channels",
+        "description": "Connect your lobster to the places where work already happens."
+      },
+      "skills": {
+        "title": "Skills",
+        "description": "Install focused abilities and integrations for your lobster."
+      },
+      "memory": {
+        "title": "Memory",
+        "description": "Review the long-term context your lobster keeps across conversations."
+      },
+      "pricing": {
+        "title": "Pricing",
+        "description": "Upgrade when you need more lobsters, channels, and team support."
+      }
+    },
+    "overview": {
+      "title": "Overview",
+      "description": "Your lobster home page, setup shortcuts, and active capabilities.",
+      "emptyDescription": "Your personal lobster will show up here once you create it.",
+      "emptyTitle": "No lobster yet",
+      "emptyBody": "Jump into chat to create your lobster and start the workspace setup flow.",
+      "openChat": "Open chat",
+      "createdToday": "Created today",
+      "createdOn": "Created {date}",
+      "createToBegin": "Create your lobster to begin",
+      "online": "Online",
+      "offline": "Offline",
+      "roleLabel": "{role} lobster",
+      "stats": {
+        "status": "Status",
+        "connected": "Connected",
+        "waiting": "Waiting on gateway",
+        "timeline": "Timeline",
+        "chats": "Chats",
+        "syncing": "Syncing soon"
+      },
+      "quickActions": {
+        "title": "Quick actions",
+        "description": "Set up the workspace pieces new users usually need first.",
+        "items": {
+          "channels": {
+            "title": "Connect a channel",
+            "description": "Add Telegram, Feishu, Discord, or web chat entry points."
+          },
+          "skills": {
+            "title": "Install a skill",
+            "description": "Give your lobster specialized tools and integrations."
+          },
+          "memory": {
+            "title": "View memory",
+            "description": "See what the lobster keeps across chats and sessions."
+          }
+        }
+      },
+      "capabilities": {
+        "title": "Capabilities",
+        "description": "Active abilities available in this workspace right now.",
+        "activeCount": "{count} active",
+        "items": {
+          "browsing": { "name": "Web browsing", "description": "Search and read web pages in real time." },
+          "files": { "name": "File management", "description": "Read, write, and organize files in the workspace." },
+          "code": { "name": "Code execution", "description": "Run scripts, build projects, and execute shell commands." },
+          "messaging": { "name": "Send messages", "description": "Proactively send messages to connected channels." },
+          "scheduled": { "name": "Scheduled tasks", "description": "Set reminders, checks, and repeating jobs." },
+          "image": { "name": "Image analysis", "description": "Analyze screenshots, photos, and diagrams." },
+          "pdf": { "name": "PDF reading", "description": "Extract and analyze content from PDF documents." },
+          "email": { "name": "Email access", "description": "Read and send emails via connected accounts." }
+        }
+      }
+    },
+    "onboarding": {
+      "eyebrow": "First-time setup",
+      "title": "Finish setting up {name}",
+      "description": "Visit the key workspace areas once so the new-user flow makes sense from the start.",
+      "steps": "3 steps",
+      "skip": "Skip setup",
+      "items": {
+        "chat": {
+          "title": "Say hello",
+          "description": "Open chat and start the first conversation."
+        },
+        "channels": {
+          "title": "Connect a channel",
+          "description": "See where your lobster can live outside the browser."
+        },
+        "skills": {
+          "title": "Add a skill",
+          "description": "Browse installable skills and add capability depth."
+        }
+      }
+    },
+    "panels": {
+      "channels": {
+        "connect": "Connect",
+        "statuses": {
+          "connected": "Connected",
+          "available": "Available",
+          "coming_soon": "Coming soon"
+        },
+        "modal": {
+          "eyebrow": "Channel setup",
+          "title": "Connect {channel}",
+          "beforeYouStart": "What this button does",
+          "beforeYouStartBody": "This opens a guided setup instead of a dead link. You can finish the connection from Settings and your gateway config.",
+          "steps": {
+            "0": {
+              "title": "Open workspace settings",
+              "body": "Review the gateway URL and token first. Channel delivery will fail until the workspace gateway is configured."
+            },
+            "1": {
+              "title": "Prepare the {channel} app",
+              "body": "Create the {channel} bot or app in the official platform, then keep its token, app ID, or signing secret ready."
+            },
+            "2": {
+              "title": "Add credentials to the gateway",
+              "body": "Update your OpenClaw gateway with the {channel} credentials, save, and restart the gateway so ChatClaw can deliver messages there."
+            }
+          },
+          "footer": "After the gateway reconnects, this channel can be used as a real message entry point instead of staying in placeholder state.",
+          "close": "Maybe later",
+          "openSettings": "Open settings",
+          "channels": {
+            "telegram": {
+              "name": "Telegram",
+              "description": "Use Telegram when you want your lobster to work in DMs or group chats."
+            },
+            "feishu": {
+              "name": "Feishu",
+              "description": "Use Feishu when the lobster needs to join internal team conversations."
+            },
+            "discord": {
+              "name": "Discord",
+              "description": "Use Discord when the lobster should operate inside a server or support channel."
+            }
+          }
+        },
+        "items": {
+          "web": { "name": "Web Chat", "description": "Chat directly in the browser." },
+          "telegram": { "name": "Telegram", "description": "Deploy your lobster as a Telegram bot." },
+          "feishu": { "name": "Feishu", "description": "Connect to Feishu for team messaging." },
+          "discord": { "name": "Discord", "description": "Add your lobster to any Discord server." },
+          "slack": { "name": "Slack", "description": "Slack integration is coming soon." }
+        }
+      },
+      "memory": {
+        "footer": "Memory grows as you chat. The more you use your lobster, the better it knows you.",
+        "items": {
+          "longTerm": { "title": "Long-term memory", "description": "Persists across sessions and remembers projects, preferences, and past decisions." },
+          "dailyNotes": { "title": "Daily notes", "description": "Auto-logged context on what happened, what was discussed, and what to follow up on." },
+          "profile": { "title": "User profile", "description": "Knows your name, timezone, communication style, and working habits." },
+          "projects": { "title": "Project context", "description": "Tracks active projects, goals, deadlines, and key decisions." }
+        }
+      },
+      "capabilities": {
+        "active": "Active",
+        "inactive": "Inactive",
+        "items": {
+          "browsing": { "name": "Web browsing", "description": "Search and read web pages in real time." },
+          "files": { "name": "File management", "description": "Read, write, and organize files in the workspace." },
+          "code": { "name": "Code execution", "description": "Run scripts, build projects, and execute shell commands." },
+          "messaging": { "name": "Send messages", "description": "Proactively send messages to connected channels." },
+          "scheduled": { "name": "Scheduled tasks", "description": "Set reminders, checks, and repeating jobs." },
+          "image": { "name": "Image analysis", "description": "Analyze screenshots, photos, and diagrams." },
+          "pdf": { "name": "PDF reading", "description": "Extract and analyze content from PDF documents." },
+          "email": { "name": "Email access", "description": "Read and send emails via connected accounts." }
+        }
+      },
+      "skills": {
+        "installed": "Installed",
+        "available": "Available",
+        "install": "Install",
+        "footerPrefix": "Browse more skills at",
+        "items": {
+          "github": { "name": "GitHub", "description": "Manage issues, PRs, and CI runs." },
+          "googleWorkspace": { "name": "Google Workspace", "description": "Gmail, Calendar, Drive, Docs, and Sheets." },
+          "weather": { "name": "Weather", "description": "Current weather and forecasts." },
+          "webSearch": { "name": "Web Search", "description": "AI-optimized web search." },
+          "codingAgent": { "name": "Coding Agent", "description": "Delegate coding tasks to terminal coding agents." },
+          "seo": { "name": "SEO Toolkit", "description": "Site audits, content writing, and keyword research." },
+          "notion": { "name": "Notion", "description": "Create and manage Notion pages and databases." },
+          "analytics": { "name": "Analytics", "description": "Google Analytics 4 and Search Console." }
+        }
+      }
+    },
+    "chat": {
+      "loading": "Loading workspace...",
+      "agentFallback": "Agent",
+      "teamFallback": "Team",
+      "you": "You",
+      "thinking": "Thinking...",
+      "gatewayUnavailable": "Gateway not connected...",
+      "placeholder": {
+        "agent": "Message {name}",
+        "team": "Message {name} team"
+      },
+      "intro": {
+        "agentTitle": "Hey! I'm {name}",
+        "agentBody": "Hey! I'm {name}, your {role} lobster. I can browse the web, analyze documents, and remember what we discuss.",
+        "teamBody": "Your specialist team is standing by.",
+        "pickPrompt": "Pick a task below or type anything to get started."
+      },
+      "empty": {
+        "badge": "Personal workspace",
+        "title": "Create your lobster in one short step.",
+        "secondaryExisting": "Name it once, pick an optional role, and land directly in its chat.",
+        "secondaryNew": "We’ll create the workspace, set a default lobster, and drop you straight into chat.",
+        "tags": {
+          "setup": "1-click setup",
+          "defaultChat": "Personal default chat",
+          "guided": "Guided setup"
+        },
+        "cardTitle": "Start here",
+        "cardDescription": "Give it a name. Add a role if you want. Everything else stays available in the workspace.",
+        "form": {
+          "name": "Name",
+          "namePlaceholder": "Atlas",
+          "role": "Role",
+          "optional": "Optional",
+          "submit": "Create my lobster",
+          "sidebarHint": "Demo agents stay available from the sidebar toggle when you need them."
+        }
+      },
+      "examples": {
+        "0": { "title": "🗓️ Run my day", "description": "Get an operator-grade schedule in one prompt." },
+        "1": { "title": "🔍 Stress-test my idea", "description": "Pressure-test a concept with strengths, risks, and next steps." },
+        "2": { "title": "🚀 Ship my demo", "description": "Turn a vague plan into a concrete product story." }
+      },
+      "prompts": {
+        "agent": {
+          "0": { "label": "🔍 Research a topic", "prompt": "Search the web for the latest news about AI agents and summarize the top 3 developments." },
+          "1": { "label": "📄 Analyze a document", "prompt": "I have a business plan that needs feedback. What questions should I answer before sharing it?" },
+          "2": { "label": "🧠 Remember this", "prompt": "Remember that my name is [user], I work on [project], and I prefer concise answers. Confirm what you noted." }
+        },
+        "team": {
+          "0": { "label": "🗓️ Run my day", "prompt": "Act as my executive operator. I have three meetings, two hours for deep work, and need to move a product demo forward. Build a realistic schedule with priorities and time blocks." },
+          "1": { "label": "🔍 Stress-test my idea", "prompt": "I want to build an AI operator that handles customer onboarding end-to-end. As a team, pressure-test the strengths, hidden risks, and the first experiment to run." },
+          "2": { "label": "🚀 Ship my demo", "prompt": "Work as a product team. I’m building a hosted OpenClaw demo. Tell me what the landing page should promise, what the onboarding must do, and what would make a buyer say yes in five minutes." }
+        }
+      },
+      "errors": {
+        "nameRequired": "Name your lobster to continue.",
+        "gatewayHint": "Personal workspace for {name}. Connect a gateway to start chatting.",
+        "noWorkspace": "No workspace was available.",
+        "createFailed": "Could not create your lobster."
+      }
+    }
   }
 }

@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
-import { Bot, Brain, CreditCard, Link2, Package, Settings } from "lucide-react";
+import { useEffect, useSyncExternalStore } from "react";
+import { Bot, Brain, CreditCard, Link2, Package } from "lucide-react";
 import { AuthModal } from "@/components/auth-modal";
 import { ChatArea } from "@/components/chat-area";
 import {
@@ -22,6 +22,7 @@ import {
   getPrimaryAgent,
   markOnboardingStep,
   readOnboardingState,
+  subscribeOnboarding,
   type LobsterOnboardingState,
   type OnboardingStepView,
 } from "@/lib/workspace";
@@ -61,16 +62,11 @@ export function WorkspaceMain() {
   const { user } = useAuth();
   const { state, actions } = useStore();
   const primaryAgent = getPrimaryAgent(state);
-  const [onboardingState, setOnboardingState] = useState<LobsterOnboardingState | null>(null);
-
-  useEffect(() => {
-    if (!primaryAgent) {
-      setOnboardingState(null);
-      return;
-    }
-
-    setOnboardingState(readOnboardingState(primaryAgent.id));
-  }, [primaryAgent]);
+  const onboardingState = useSyncExternalStore(
+    subscribeOnboarding,
+    () => (primaryAgent ? readOnboardingState(primaryAgent.id) : null),
+    () => null as LobsterOnboardingState | null
+  );
 
   useEffect(() => {
     if (!primaryAgent || !onboardingState || onboardingState.dismissed) {
@@ -88,7 +84,7 @@ export function WorkspaceMain() {
       return;
     }
 
-    setOnboardingState(markOnboardingStep(primaryAgent.id, onboardingView));
+    markOnboardingStep(primaryAgent.id, onboardingView);
   }, [onboardingState, primaryAgent, state.activeView]);
 
   useEffect(() => {
@@ -97,7 +93,7 @@ export function WorkspaceMain() {
     }
 
     if (Object.values(onboardingState.steps).every(Boolean)) {
-      setOnboardingState(dismissOnboarding(primaryAgent.id));
+      dismissOnboarding(primaryAgent.id);
     }
   }, [onboardingState, primaryAgent]);
 
@@ -126,7 +122,7 @@ export function WorkspaceMain() {
           description={t("views.channels.description")}
           icon={Link2}
         >
-          <ChannelsPanel />
+          <ChannelsPanel onOpenSettings={() => navigateToView("settings")} />
         </WorkspacePage>
       );
       break;
@@ -181,7 +177,7 @@ export function WorkspaceMain() {
           lobsterName={primaryAgent.name}
           steps={onboardingState.steps}
           onNavigate={navigateOnboarding}
-          onSkip={() => setOnboardingState(dismissOnboarding(primaryAgent.id))}
+          onSkip={() => dismissOnboarding(primaryAgent.id)}
         />
       )}
     </div>

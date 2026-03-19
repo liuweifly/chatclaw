@@ -190,7 +190,8 @@ export class GatewayClient {
     }
   }
 
-  async abortChat(sessionKey: string, _runId?: string): Promise<void> {
+  async abortChat(sessionKey: string, runId?: string): Promise<void> {
+    void runId;
     const controller = this.activeAbortControllers.get(sessionKey);
     if (controller) {
       controller.abort();

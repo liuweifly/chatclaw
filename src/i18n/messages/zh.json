@@ -21,5 +21,409 @@
     "pro": "专业版",
     "team": "团队版",
     "month": "/月"
+  },
+  "auth": {
+    "title": "登录 ChatClaw",
+    "description": "使用 Google 或邮箱登录，解锁工作区、计费和已保存的小龙虾。",
+    "google": "使用 Google 继续",
+    "or": "或",
+    "signIn": "登录",
+    "signUp": "注册",
+    "signInCta": "登录",
+    "signUpCta": "创建账号",
+    "email": "邮箱",
+    "password": "密码",
+    "logout": "退出登录",
+    "missingFields": "请输入邮箱和密码。",
+    "genericError": "认证失败。"
+  },
+  "pricing": {
+    "eyebrow": "价格",
+    "title": "选择适合你的小龙虾方案",
+    "description": "先免费开始，需要更多小龙虾、渠道和协作时再升级。",
+    "popular": "最受欢迎",
+    "forever": "永久",
+    "perMonth": "每月",
+    "currentPlan": "当前方案",
+    "free": {
+      "name": "免费版",
+      "summary": "适合试用产品和单个个人小龙虾。",
+      "cta": "当前方案",
+      "features": {
+        "0": "1 个小龙虾",
+        "1": "仅网页聊天",
+        "2": "每天 50 条消息",
+        "3": "基础工作区配置"
+      }
+    },
+    "pro": {
+      "name": "专业版",
+      "summary": "适合需要多个小龙虾和全部渠道的个人操作者。",
+      "cta": "升级到专业版",
+      "features": {
+        "0": "3 个小龙虾",
+        "1": "全部渠道",
+        "2": "无限消息",
+        "3": "全部技能"
+      }
+    },
+    "team": {
+      "name": "团队版",
+      "summary": "适合多小龙虾协作和更快支持的团队。",
+      "cta": "升级到团队版",
+      "features": {
+        "0": "10 个小龙虾",
+        "1": "团队协作",
+        "2": "优先支持",
+        "3": "包含专业版全部内容"
+      }
+    }
+  },
+  "settings": {
+    "title": "设置",
+    "description": "统一管理账号、语言和计费。",
+    "plan": {
+      "title": "当前方案",
+      "free": "免费方案",
+      "pro": "专业版方案",
+      "team": "团队版方案",
+      "upgrade": "升级方案"
+    },
+    "language": {
+      "title": "语言",
+      "description": "选择整个产品使用的语言。"
+    },
+    "session": {
+      "title": "会话",
+      "description": "退出当前浏览器会话。",
+      "logout": "退出登录"
+    },
+    "danger": {
+      "title": "危险区域",
+      "description": "删除账号并移除对该工作区的访问。",
+      "delete": "删除账号",
+      "confirm": "确定删除 ChatClaw 账号吗？此操作无法撤销。"
+    }
+  },
+  "landing": {
+    "hero": {
+      "badge": "不只是另一个聊天机器人",
+      "titlePrefix": "真正能",
+      "titleAccent": "干活的 AI",
+      "description": "创建一个小龙虾，一个常驻在线的 AI 操作员，它可以存在于 Telegram、飞书、Discord 和浏览器里。",
+      "tryDemo": "试用演示",
+      "create": "创建我的小龙虾",
+      "goToWorkspace": "进入工作区",
+      "subline": "免费体验 · 登录后可保存工作区"
+    },
+    "comparison": {
+      "title": "为什么不直接用 ChatGPT？",
+      "description": "ChatClaw 能接入你的工具、记住上下文，并且在你关掉标签页后继续工作。",
+      "table": {
+        "feature": "特性",
+        "us": "小龙虾",
+        "them": "ChatGPT"
+      },
+      "rows": {
+        "0": { "label": "持久记忆" },
+        "1": { "label": "多渠道部署" },
+        "2": { "label": "后台常驻工作" },
+        "3": { "label": "执行真实任务" },
+        "4": { "label": "多智能体协作" },
+        "5": { "label": "自托管控制" },
+        "6": { "label": "AI 聊天" }
+      }
+    },
+    "features": {
+      "title": "你的小龙虾能做什么",
+      "description": "它是一个操作者，而不只是聊天窗口。",
+      "items": {
+        "0": { "title": "住在你的工作现场", "description": "连接 Telegram、飞书、Discord 和 Slack。" },
+        "1": { "title": "记住一切", "description": "跨项目、偏好和会话保留长期记忆。" },
+        "2": { "title": "真的能做事", "description": "浏览网页、运行脚本、管理文档并推动工作。" },
+        "3": { "title": "始终在线", "description": "7x24 运行，支持提醒、计划和后台执行。" },
+        "4": { "title": "多智能体团队", "description": "创建不同专家并让他们围绕同一任务协作。" },
+        "5": { "title": "数据由你掌控", "description": "掌控密钥、运行时和部署方式。" }
+      }
+    },
+    "steps": {
+      "title": "30 秒拥有第一个小龙虾",
+      "items": {
+        "0": { "title": "命名", "description": "给它起个名字，并可选择一个角色。" },
+        "1": { "title": "开始聊天", "description": "从预设任务开始，或直接让它处理真实工作。" },
+        "2": { "title": "接入渠道", "description": "把它部署到真正发生工作的地方。" }
+      }
+    },
+    "cta": {
+      "title": "构建真正的 AI 工作区，而不是空聊天页",
+      "description": "认证、价格、渠道、记忆和工作区设置已经能支撑产品继续成长。",
+      "button": "立即创建我的小龙虾"
+    },
+    "footer": "由 OpenClaw 驱动，专为托管式 AI 智能体工作区打造。"
+  },
+  "workspace": {
+    "empty": "从主面板创建你的小龙虾，开始个人工作区。",
+    "nav": {
+      "overview": "概览",
+      "chat": "聊天",
+      "channels": "渠道",
+      "skills": "技能",
+      "memory": "记忆",
+      "pricing": "价格",
+      "settings": "设置"
+    },
+    "demo": {
+      "show": "显示演示智能体",
+      "hide": "隐藏演示智能体"
+    },
+    "views": {
+      "channels": {
+        "title": "渠道",
+        "description": "把你的小龙虾连接到真正发生工作的地方。"
+      },
+      "skills": {
+        "title": "技能",
+        "description": "为你的小龙虾安装专注能力和集成。"
+      },
+      "memory": {
+        "title": "记忆",
+        "description": "查看小龙虾在跨会话中保留的长期上下文。"
+      },
+      "pricing": {
+        "title": "价格",
+        "description": "当你需要更多小龙虾、渠道和团队支持时升级。"
+      }
+    },
+    "overview": {
+      "title": "概览",
+      "description": "你的小龙虾主页、配置捷径和当前可用能力。",
+      "emptyDescription": "创建后，你的个人小龙虾会显示在这里。",
+      "emptyTitle": "还没有小龙虾",
+      "emptyBody": "进入聊天创建你的小龙虾，并启动工作区引导流程。",
+      "openChat": "打开聊天",
+      "createdToday": "今天创建",
+      "createdOn": "创建于 {date}",
+      "createToBegin": "创建你的小龙虾以开始",
+      "online": "在线",
+      "offline": "离线",
+      "roleLabel": "{role} 小龙虾",
+      "stats": {
+        "status": "状态",
+        "connected": "已连接",
+        "waiting": "等待网关",
+        "timeline": "时间线",
+        "chats": "聊天",
+        "syncing": "即将同步"
+      },
+      "quickActions": {
+        "title": "快捷操作",
+        "description": "先完成新用户最常需要的工作区配置。",
+        "items": {
+          "channels": {
+            "title": "连接渠道",
+            "description": "添加 Telegram、飞书、Discord 或网页聊天入口。"
+          },
+          "skills": {
+            "title": "安装技能",
+            "description": "为你的小龙虾提供专业工具和集成。"
+          },
+          "memory": {
+            "title": "查看记忆",
+            "description": "看看它在聊天和会话中保留了什么。"
+          }
+        }
+      },
+      "capabilities": {
+        "title": "能力",
+        "description": "当前工作区内可立即使用的能力。",
+        "activeCount": "{count} 个已启用",
+        "items": {
+          "browsing": { "name": "网页浏览", "description": "实时搜索并阅读网页。" },
+          "files": { "name": "文件管理", "description": "读取、写入并整理工作区文件。" },
+          "code": { "name": "代码执行", "description": "运行脚本、构建项目并执行命令。" },
+          "messaging": { "name": "发送消息", "description": "主动向已连接渠道发送消息。" },
+          "scheduled": { "name": "定时任务", "description": "设置提醒、巡检和重复任务。" },
+          "image": { "name": "图像分析", "description": "分析截图、照片和图表。" },
+          "pdf": { "name": "PDF 阅读", "description": "提取并分析 PDF 文档内容。" },
+          "email": { "name": "邮件访问", "description": "通过已连接账号收发邮件。" }
+        }
+      }
+    },
+    "onboarding": {
+      "eyebrow": "首次设置",
+      "title": "完成 {name} 的设置",
+      "description": "先访问一次关键工作区区域，让新手流程从一开始就合理。",
+      "steps": "3 个步骤",
+      "skip": "跳过设置",
+      "items": {
+        "chat": {
+          "title": "打个招呼",
+          "description": "打开聊天并开始第一次对话。"
+        },
+        "channels": {
+          "title": "连接渠道",
+          "description": "看看你的小龙虾除了浏览器还能住在哪里。"
+        },
+        "skills": {
+          "title": "添加技能",
+          "description": "浏览可安装技能并补充能力深度。"
+        }
+      }
+    },
+    "panels": {
+      "channels": {
+        "connect": "连接",
+        "statuses": {
+          "connected": "已连接",
+          "available": "可用",
+          "coming_soon": "即将推出"
+        },
+        "modal": {
+          "eyebrow": "渠道设置",
+          "title": "连接 {channel}",
+          "beforeYouStart": "这个按钮会做什么",
+          "beforeYouStartBody": "这里会打开清晰的接入引导，而不是空操作。你可以从设置页和网关配置完成真正接入。",
+          "steps": {
+            "0": {
+              "title": "打开工作区设置",
+              "body": "先确认网关 URL 和 Token。工作区网关未配置好之前，渠道消息无法正常投递。"
+            },
+            "1": {
+              "title": "准备 {channel} 应用",
+              "body": "先在官方平台创建 {channel} 机器人或应用，并准备好 token、app ID 或签名密钥。"
+            },
+            "2": {
+              "title": "把凭据写入网关",
+              "body": "将 {channel} 凭据更新到 OpenClaw 网关中，保存后重启网关，这样 ChatClaw 才能把消息发送到该渠道。"
+            }
+          },
+          "footer": "当网关重新连上后，这个渠道才能从占位状态变成真正可用的消息入口。",
+          "close": "稍后再说",
+          "openSettings": "打开设置",
+          "channels": {
+            "telegram": {
+              "name": "Telegram",
+              "description": "如果你希望小龙虾在私聊或群聊里工作，优先接入 Telegram。"
+            },
+            "feishu": {
+              "name": "飞书",
+              "description": "如果你希望小龙虾进入团队内部沟通流，优先接入飞书。"
+            },
+            "discord": {
+              "name": "Discord",
+              "description": "如果你希望小龙虾在服务器或支持频道中工作，优先接入 Discord。"
+            }
+          }
+        },
+        "items": {
+          "web": { "name": "网页聊天", "description": "直接在浏览器中聊天。" },
+          "telegram": { "name": "Telegram", "description": "将你的小龙虾部署为 Telegram 机器人。" },
+          "feishu": { "name": "飞书", "description": "连接飞书用于团队消息。" },
+          "discord": { "name": "Discord", "description": "把你的小龙虾加入任意 Discord 服务器。" },
+          "slack": { "name": "Slack", "description": "Slack 集成即将推出。" }
+        }
+      },
+      "memory": {
+        "footer": "记忆会随着聊天而增长。你用得越多，它就越了解你。",
+        "items": {
+          "longTerm": { "title": "长期记忆", "description": "跨会话保留并记住项目、偏好和过去决策。" },
+          "dailyNotes": { "title": "每日笔记", "description": "自动记录发生了什么、讨论了什么、后续要跟进什么。" },
+          "profile": { "title": "用户画像", "description": "了解你的名字、时区、沟通方式和工作习惯。" },
+          "projects": { "title": "项目上下文", "description": "跟踪当前项目、目标、截止日期和关键决策。" }
+        }
+      },
+      "capabilities": {
+        "active": "已启用",
+        "inactive": "未启用",
+        "items": {
+          "browsing": { "name": "网页浏览", "description": "实时搜索并阅读网页。" },
+          "files": { "name": "文件管理", "description": "读取、写入并整理工作区文件。" },
+          "code": { "name": "代码执行", "description": "运行脚本、构建项目并执行命令。" },
+          "messaging": { "name": "发送消息", "description": "主动向已连接渠道发送消息。" },
+          "scheduled": { "name": "定时任务", "description": "设置提醒、巡检和重复任务。" },
+          "image": { "name": "图像分析", "description": "分析截图、照片和图表。" },
+          "pdf": { "name": "PDF 阅读", "description": "提取并分析 PDF 文档内容。" },
+          "email": { "name": "邮件访问", "description": "通过已连接账号收发邮件。" }
+        }
+      },
+      "skills": {
+        "installed": "已安装",
+        "available": "可用",
+        "install": "安装",
+        "footerPrefix": "更多技能请访问",
+        "items": {
+          "github": { "name": "GitHub", "description": "管理 issue、PR 和 CI 运行。" },
+          "googleWorkspace": { "name": "Google Workspace", "description": "Gmail、日历、Drive、Docs 和 Sheets。" },
+          "weather": { "name": "天气", "description": "当前天气和预报。" },
+          "webSearch": { "name": "网页搜索", "description": "面向 AI 的网页搜索。" },
+          "codingAgent": { "name": "编码智能体", "description": "将编码任务委托给终端编码智能体。" },
+          "seo": { "name": "SEO 工具包", "description": "站点审计、内容写作和关键词研究。" },
+          "notion": { "name": "Notion", "description": "创建并管理 Notion 页面和数据库。" },
+          "analytics": { "name": "分析", "description": "Google Analytics 4 和 Search Console。" }
+        }
+      }
+    },
+    "chat": {
+      "loading": "正在加载工作区...",
+      "agentFallback": "智能体",
+      "teamFallback": "团队",
+      "you": "你",
+      "thinking": "思考中...",
+      "gatewayUnavailable": "网关未连接...",
+      "placeholder": {
+        "agent": "发送消息给 {name}",
+        "team": "发送消息给 {name} 团队"
+      },
+      "intro": {
+        "agentTitle": "你好，我是 {name}",
+        "agentBody": "你好，我是 {name}，你的 {role} 小龙虾。我可以浏览网页、分析文档，并记住我们讨论的内容。",
+        "teamBody": "你的专家团队已就位。",
+        "pickPrompt": "从下面选择一个任务，或直接输入内容开始。"
+      },
+      "empty": {
+        "badge": "个人工作区",
+        "title": "一步创建你的小龙虾。",
+        "secondaryExisting": "命名一次，选一个可选角色，然后直接进入它的聊天。",
+        "secondaryNew": "我们会创建工作区、设置默认小龙虾，并直接带你进入聊天。",
+        "tags": {
+          "setup": "一键设置",
+          "defaultChat": "个人默认聊天",
+          "guided": "引导式设置"
+        },
+        "cardTitle": "从这里开始",
+        "cardDescription": "先给它起名。想的话再加个角色。其余内容都保留在工作区里。",
+        "form": {
+          "name": "名称",
+          "namePlaceholder": "Atlas",
+          "role": "角色",
+          "optional": "可选",
+          "submit": "创建我的小龙虾",
+          "sidebarHint": "需要时，你仍可从侧边栏切换查看演示智能体。"
+        }
+      },
+      "examples": {
+        "0": { "title": "🗓️ 安排我的一天", "description": "用一个提示生成运营级日程。" },
+        "1": { "title": "🔍 压测我的想法", "description": "快速评估一个概念的优势、风险和下一步。" },
+        "2": { "title": "🚀 帮我完成演示", "description": "把模糊计划变成清晰的产品叙事。" }
+      },
+      "prompts": {
+        "agent": {
+          "0": { "label": "🔍 研究一个主题", "prompt": "搜索 AI 智能体的最新动态，并总结前三个重要进展。" },
+          "1": { "label": "📄 分析一份文档", "prompt": "我有一份商业计划书需要反馈。在分享前，我应该回答哪些问题？" },
+          "2": { "label": "🧠 记住这件事", "prompt": "记住我的名字是 [user]，我在做 [project]，并且我偏好简洁回答。请确认你记住了什么。" }
+        },
+        "team": {
+          "0": { "label": "🗓️ 安排我的一天", "prompt": "请作为我的执行型运营助手。我今天有三场会议、两个小时深度工作，还要推进产品演示。请给我一份现实可执行的日程安排。" },
+          "1": { "label": "🔍 压测我的想法", "prompt": "我想做一个端到端处理客户引导的 AI 操作员。请从团队视角评估它的优势、隐藏风险，以及最该先做的实验。" },
+          "2": { "label": "🚀 帮我完成演示", "prompt": "请作为产品团队协作。我正在做一个托管版 OpenClaw 演示。请告诉我落地页该承诺什么、引导流程必须做什么，以及什么会让买家在五分钟内点头。" }
+        }
+      },
+      "errors": {
+        "nameRequired": "先为你的小龙虾命名。",
+        "gatewayHint": "{name} 的个人工作区。连接网关后即可开始聊天。",
+        "noWorkspace": "当前没有可用工作区。",
+        "createFailed": "无法创建你的小龙虾。"
+      }
+    }
   }
 }

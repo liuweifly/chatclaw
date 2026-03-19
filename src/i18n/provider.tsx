@@ -49,15 +49,23 @@ function formatMessage(template: string, values?: Record<string, string | number
   );
 }
 
+function getInitialLocale(): AppLocale {
+  if (typeof window === "undefined") {
+    return DEFAULT_LOCALE;
+  }
+
+  const stored = window.localStorage.getItem(LOCALE_STORAGE_KEY);
+  return stored ? resolveLocale(stored) : detectBrowserLocale();
+}
+
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<AppLocale>(DEFAULT_LOCALE);
+  const [locale, setLocaleState] = useState<AppLocale>(getInitialLocale);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(LOCALE_STORAGE_KEY);
-    const nextLocale = stored ? resolveLocale(stored) : detectBrowserLocale();
-    setLocaleState(nextLocale);
-    document.documentElement.lang = nextLocale;
-  }, []);
+    window.localStorage.setItem(LOCALE_STORAGE_KEY, locale);
+    document.cookie = `chatclaw-locale=${locale}; Path=/; Max-Age=${60 * 60 * 24 * 365}; SameSite=Lax`;
+    document.documentElement.lang = locale;
+  }, [locale]);
 
   const value = useMemo<I18nContextValue>(
     () => ({
@@ -65,9 +73,6 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       setLocale: (nextLocale) => {
         const resolved = resolveLocale(nextLocale);
         setLocaleState(resolved);
-        window.localStorage.setItem(LOCALE_STORAGE_KEY, resolved);
-        document.cookie = `chatclaw-locale=${resolved}; Path=/; Max-Age=${60 * 60 * 24 * 365}; SameSite=Lax`;
-        document.documentElement.lang = resolved;
       },
       messages: MESSAGES[locale],
     }),

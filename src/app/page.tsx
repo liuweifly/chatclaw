@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/auth-provider";
 import { StoreProvider } from "@/lib/store";
@@ -12,16 +12,11 @@ import { WorkspaceMain } from "@/components/workspace-main";
 function HomeInner() {
   const searchParams = useSearchParams();
   const { user } = useAuth();
-  const [entered, setEntered] = useState(false);
-
-  useEffect(() => {
-    if (searchParams.get("workspace") === "1") {
-      setEntered(true);
-    }
-  }, [searchParams]);
+  const [manuallyEntered, setManuallyEntered] = useState(false);
+  const entered = manuallyEntered || searchParams.get("workspace") === "1";
 
   if (!entered) {
-    return <LandingPage onEnter={() => setEntered(true)} isAuthenticated={!!user} />;
+    return <LandingPage onEnter={() => setManuallyEntered(true)} isAuthenticated={!!user} />;
   }
 
   return (
