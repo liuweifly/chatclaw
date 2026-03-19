@@ -38,9 +38,33 @@ export interface LobsterRecord {
   id: string;
   user_id: string;
   name: string;
+  description: string | null;
   role: string | null;
   agent_id: string | null;
   status: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LobsterAgentRecord {
+  id: string;
+  user_id: string;
+  company_id: string;
+  name: string;
+  avatar_url: string | null;
+  description: string;
+  specialty: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LobsterTeamRecord {
+  id: string;
+  user_id: string;
+  company_id: string;
+  name: string;
+  description: string | null;
+  agent_ids: string[];
   created_at: string;
   updated_at: string;
 }

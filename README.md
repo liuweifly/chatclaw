@@ -14,7 +14,8 @@ Think ChatGPT/Claude.ai UX, but connecting to your own OpenClaw agents.
 - ⚡ **Streaming Responses** — Real-time SSE streaming via OpenAI-compatible API
 - 📝 **Markdown Rendering** — Syntax highlighting, tables, and more
 - 🎨 **Dark Theme** — Discord-inspired dark UI
-- 💾 **Local Storage** — All data in IndexedDB, zero backend database
+- 🗂️ **Supabase Metadata** — Workspace, agent, and team metadata sync through Supabase
+- 💬 **Workspace Transcript Source** — Chat history is read back from OpenClaw session files in the VPS workspace
 - 🔌 **Auto-Bootstrap** — Reads `~/.openclaw/openclaw.json` on first launch
 
 ## Quick Start
@@ -71,8 +72,17 @@ Browser → Next.js API proxy (/api/chat) → OpenClaw Gateway (/v1/chat/complet
 
 - **Next.js 16** — App Router + TypeScript
 - **Tailwind CSS** + **shadcn/ui** — UI components
-- **Dexie.js** — IndexedDB for local storage
+- **Supabase** — Auth and workspace metadata storage
 - **HTTP SSE** — OpenAI-compatible streaming API
+
+## Supabase Metadata Setup
+
+Apply the SQL in [docs/supabase-workspace-metadata.sql](./docs/supabase-workspace-metadata.sql) before using hosted workspace metadata. It adds:
+
+- `lobsters.description`
+- `lobster_agents`
+- `lobster_teams`
+- RLS policies scoped to `auth.uid()`
 
 ## Team Chat
 

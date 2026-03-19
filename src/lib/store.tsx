@@ -8,46 +8,33 @@ import React, {
   useEffect,
   useRef,
 } from "react";
-import { useAuth } from "@/components/auth-provider";
 import { v4 as uuidv4 } from "uuid";
+import { useAuth } from "@/components/auth-provider";
 import {
-  clearAllStorageScopes,
-  getAllCompanies,
-  createCompany as dbCreateCompany,
-  updateCompany as dbUpdateCompany,
-  deleteCompany as dbDeleteCompany,
+  clearStorageScope,
   getAgentsByCompany,
-  createAgent as dbCreateAgent,
-  updateAgent as dbUpdateAgent,
-  deleteAgent as dbDeleteAgent,
-  getTeamsByCompany,
-  createTeam as dbCreateTeam,
-  updateTeam as dbUpdateTeam,
-  deleteTeam as dbDeleteTeam,
-  getMessagesByTarget,
-  addMessage,
+  getAllCompanies,
   getStorageScope,
-  purgeLegacyLocalDatabase,
+  getTeamsByCompany,
 } from "@/lib/db";
 import { GatewayClient } from "@/lib/gateway";
+import type { LobsterWorkspaceChatResponse } from "@/lib/lobster-workspace";
+import type { WorkspaceMetadataResponse } from "@/lib/workspace-metadata";
 import { clearAllOnboardingState } from "@/lib/workspace";
 import type {
-  Company,
   Agent,
-  AgentTeam,
-  Message,
-  ConnectionStatus,
   AgentIdentity,
-  ChatEventPayload,
-  AppState,
   AgentSpecialty,
+  AgentTeam,
+  AppState,
+  ChatEventPayload,
   ChatTarget,
   ChatTargetType,
+  Company,
+  ConnectionStatus,
+  Message,
   WorkspaceView,
 } from "@/types";
-import type { LobsterRecord } from "@/lib/supabase/shared";
-
-// ── Session Key Helpers ────────────────────────────────────────────
 
 function dmSessionKey(agentId: string): string {
   return `agent:${agentId}:chatclaw:dm`;
@@ -57,7 +44,7 @@ function teamSessionKey(agentId: string, teamId: string): string {
   return `agent:${agentId}:chatclaw:team:${teamId}`;
 }
 
-// ── Action Types ────────────────────────────────────────────────────
+type WorkspaceSnapshot = Pick<AppState, "companies" | "agents" | "teams">;
 
 type Action =
   | { type: "RESET_STATE" }
@@ -81,11 +68,21 @@ type Action =
   | { type: "ADD_MESSAGE"; message: Message }
   | { type: "SET_CONNECTION_STATUS"; status: ConnectionStatus }
   | { type: "SET_AGENT_IDENTITY"; agentId: string; identity: AgentIdentity }
-  | { type: "SET_STREAMING"; agentId: string; targetType: ChatTargetType; targetId: string; sessionKey: string; isStreaming: boolean }
-  | { type: "SET_STREAMING_CONTENT"; agentId: string; content: string; runId: string | null }
+  | {
+      type: "SET_STREAMING";
+      agentId: string;
+      targetType: ChatTargetType;
+      targetId: string;
+      sessionKey: string;
+      isStreaming: boolean;
+    }
+  | {
+      type: "SET_STREAMING_CONTENT";
+      agentId: string;
+      content: string;
+      runId: string | null;
+    }
   | { type: "CLEAR_STREAMING"; agentId: string };
-
-// ── Initial State ───────────────────────────────────────────────────
 
 const initialState: AppState = {
   companies: [],
@@ -100,8 +97,6 @@ const initialState: AppState = {
   streamingStates: {},
   initialized: false,
 };
-
-// ── Reducer ─────────────────────────────────────────────────────────
 
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
@@ -118,23 +113,23 @@ function reducer(state: AppState, action: Action): AppState {
     case "UPDATE_COMPANY":
       return {
         ...state,
-        companies: state.companies.map((c) =>
-          c.id === action.id ? { ...c, ...action.updates } : c
+        companies: state.companies.map((company) =>
+          company.id === action.id ? { ...company, ...action.updates } : company
         ),
       };
     case "REMOVE_COMPANY": {
-      const newState = {
+      const nextState = {
         ...state,
-        companies: state.companies.filter((c) => c.id !== action.id),
-        agents: state.agents.filter((a) => a.companyId !== action.id),
-        teams: state.teams.filter((t) => t.companyId !== action.id),
+        companies: state.companies.filter((company) => company.id !== action.id),
+        agents: state.agents.filter((agent) => agent.companyId !== action.id),
+        teams: state.teams.filter((team) => team.companyId !== action.id),
       };
       if (state.activeCompanyId === action.id) {
-        newState.activeCompanyId = newState.companies[0]?.id ?? null;
-        newState.activeChatTarget = null;
-        newState.messages = [];
+        nextState.activeCompanyId = nextState.companies[0]?.id ?? null;
+        nextState.activeChatTarget = null;
+        nextState.messages = [];
       }
-      return newState;
+      return nextState;
     }
 
     case "SET_AGENTS":
@@ -144,12 +139,15 @@ function reducer(state: AppState, action: Action): AppState {
     case "UPDATE_AGENT":
       return {
         ...state,
-        agents: state.agents.map((a) =>
-          a.id === action.id ? { ...a, ...action.updates } : a
+        agents: state.agents.map((agent) =>
+          agent.id === action.id ? { ...agent, ...action.updates } : agent
         ),
       };
     case "REMOVE_AGENT":
-      return { ...state, agents: state.agents.filter((a) => a.id !== action.id) };
+      return {
+        ...state,
+        agents: state.agents.filter((agent) => agent.id !== action.id),
+      };
 
     case "SET_TEAMS":
       return { ...state, teams: action.teams };
@@ -158,12 +156,12 @@ function reducer(state: AppState, action: Action): AppState {
     case "UPDATE_TEAM":
       return {
         ...state,
-        teams: state.teams.map((t) =>
-          t.id === action.id ? { ...t, ...action.updates } : t
+        teams: state.teams.map((team) =>
+          team.id === action.id ? { ...team, ...action.updates } : team
         ),
       };
     case "REMOVE_TEAM":
-      return { ...state, teams: state.teams.filter((t) => t.id !== action.id) };
+      return { ...state, teams: state.teams.filter((team) => team.id !== action.id) };
 
     case "SET_ACTIVE_COMPANY":
       return { ...state, activeCompanyId: action.id, activeChatTarget: null, messages: [] };
@@ -204,7 +202,7 @@ function reducer(state: AppState, action: Action): AppState {
       return {
         ...state,
         streamingStates: Object.fromEntries(
-          Object.entries(state.streamingStates).filter(([k]) => k !== action.agentId)
+          Object.entries(state.streamingStates).filter(([key]) => key !== action.agentId)
         ),
       };
     case "SET_STREAMING_CONTENT":
@@ -223,7 +221,7 @@ function reducer(state: AppState, action: Action): AppState {
       return {
         ...state,
         streamingStates: Object.fromEntries(
-          Object.entries(state.streamingStates).filter(([k]) => k !== action.agentId)
+          Object.entries(state.streamingStates).filter(([key]) => key !== action.agentId)
         ),
       };
 
@@ -232,7 +230,48 @@ function reducer(state: AppState, action: Action): AppState {
   }
 }
 
-// ── Context ─────────────────────────────────────────────────────────
+function resolvePreferredChatTarget(
+  snapshot: WorkspaceSnapshot,
+  companyId: string,
+  preferredTarget: ChatTarget | null | undefined
+) {
+  if (preferredTarget) {
+    if (
+      preferredTarget.type === "agent" &&
+      snapshot.agents.some(
+        (agent) => agent.companyId === companyId && agent.id === preferredTarget.id
+      )
+    ) {
+      return preferredTarget;
+    }
+
+    if (
+      preferredTarget.type === "team" &&
+      snapshot.teams.some(
+        (team) => team.companyId === companyId && team.id === preferredTarget.id
+      )
+    ) {
+      return preferredTarget;
+    }
+  }
+
+  const company = snapshot.companies.find((entry) => entry.id === companyId);
+  if (!company?.defaultAgentId) {
+    return null;
+  }
+
+  const hasDefaultAgent = snapshot.agents.some(
+    (agent) => agent.companyId === companyId && agent.id === company.defaultAgentId
+  );
+  if (!hasDefaultAgent) {
+    return null;
+  }
+
+  return {
+    type: "agent" as const,
+    id: company.defaultAgentId,
+  };
+}
 
 interface StoreActions {
   createCompany: (name: string, description?: string) => Promise<Company>;
@@ -249,7 +288,12 @@ interface StoreActions {
   updateAgent: (id: string, updates: Partial<Agent>) => Promise<void>;
   deleteAgent: (id: string) => Promise<void>;
 
-  createTeam: (opts: { companyId: string; name: string; description?: string; agentIds: string[] }) => Promise<AgentTeam>;
+  createTeam: (opts: {
+    companyId: string;
+    name: string;
+    description?: string;
+    agentIds: string[];
+  }) => Promise<AgentTeam>;
   updateTeam: (id: string, updates: Partial<AgentTeam>) => Promise<void>;
   deleteTeam: (id: string) => Promise<void>;
 
@@ -271,232 +315,243 @@ interface StoreContextValue {
 
 const StoreContext = createContext<StoreContextValue | null>(null);
 
-// ── Provider ────────────────────────────────────────────────────────
-
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [state, dispatch] = useReducer(reducer, initialState);
   const stateRef = useRef(state);
   const gatewayRef = useRef<GatewayClient | null>(null);
   const pendingStreamResolvers = useRef<Map<string, () => void>>(new Map());
-  const storageScope = getStorageScope(user?.id ?? null);
-  const storageScopeRef = useRef(storageScope);
   const previousUserIdRef = useRef<string | null | undefined>(undefined);
 
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
 
-  useEffect(() => {
-    storageScopeRef.current = storageScope;
-  }, [storageScope]);
+  const loadWorkspaceMessages = useCallback(
+    async (companyId: string, target: ChatTarget, teamsOverride?: AgentTeam[]) => {
+      try {
+        const params = new URLSearchParams({
+          targetType: target.type,
+          targetId: target.id,
+        });
 
-  const findLocalLobsterCompany = useCallback(
-    (lobster: Pick<LobsterRecord, "id" | "agent_id">, companies: Company[]) => {
-      const agentId = lobster.agent_id;
-      return companies.find((entry) => {
-        if (entry.id === lobster.id) {
-          return true;
+        if (target.type === "team") {
+          const teams = teamsOverride ?? stateRef.current.teams;
+          const team = teams.find((entry) => entry.id === target.id);
+          if (!team) {
+            return [] as Message[];
+          }
+          if (team.agentIds.length > 0) {
+            params.set("agentIds", team.agentIds.join(","));
+          }
         }
-        return Boolean(agentId && entry.defaultAgentId === agentId);
-      });
+
+        const response = await fetch(`/api/lobsters/${companyId}/chat?${params.toString()}`, {
+          cache: "no-store",
+        });
+        if (!response.ok) {
+          throw new Error("Could not load workspace chat history");
+        }
+
+        const payload = (await response.json()) as LobsterWorkspaceChatResponse;
+        return Array.isArray(payload.history?.messages) ? payload.history.messages : [];
+      } catch {
+        return [] as Message[];
+      }
     },
     []
   );
 
-  const mergeRemoteLobsters = useCallback(async (lobsters: LobsterRecord[]) => {
-    const syncScope = storageScopeRef.current;
+  const fetchWorkspaceMetadata = useCallback(async () => {
+    const response = await fetch("/api/workspaces", { cache: "no-store" });
+    if (!response.ok) {
+      throw new Error("Could not load workspaces");
+    }
+    return (await response.json()) as WorkspaceMetadataResponse;
+  }, []);
 
-    for (const lobster of lobsters) {
-      if (syncScope !== storageScopeRef.current) {
+  const migrateLegacyLocalMetadata = useCallback(
+    async (userId: string, remoteSnapshot: WorkspaceMetadataResponse) => {
+      const scope = getStorageScope(userId);
+      const localCompanies = await getAllCompanies(scope);
+      if (localCompanies.length === 0) {
+        return false;
+      }
+
+      let changed = false;
+      const remoteCompanyIds = new Set(remoteSnapshot.companies.map((company) => company.id));
+      const remoteAgentIds = new Set(remoteSnapshot.agents.map((agent) => agent.id));
+      const remoteTeamIds = new Set(remoteSnapshot.teams.map((team) => team.id));
+      const remoteCompaniesById = new Map(
+        remoteSnapshot.companies.map((company) => [company.id, company])
+      );
+
+      for (const company of localCompanies) {
+        if (!remoteCompanyIds.has(company.id)) {
+          const createResponse = await fetch("/api/workspaces", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id: company.id,
+              name: company.name,
+              description: company.description,
+            }),
+          });
+          if (!createResponse.ok) {
+            throw new Error(`Could not migrate workspace ${company.id}`);
+          }
+          remoteCompanyIds.add(company.id);
+          remoteCompaniesById.set(company.id, company);
+          changed = true;
+        }
+
+        const localAgents = await getAgentsByCompany(scope, company.id);
+        for (const agent of localAgents) {
+          if (remoteAgentIds.has(agent.id)) {
+            continue;
+          }
+
+          const createResponse = await fetch(`/api/workspaces/${company.id}/agents`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id: agent.id,
+              name: agent.name,
+              description: agent.description,
+              specialty: agent.specialty,
+            }),
+          });
+          if (!createResponse.ok) {
+            throw new Error(`Could not migrate agent ${agent.id}`);
+          }
+          remoteAgentIds.add(agent.id);
+          changed = true;
+        }
+
+        const localTeams = await getTeamsByCompany(scope, company.id);
+        for (const team of localTeams) {
+          if (remoteTeamIds.has(team.id)) {
+            continue;
+          }
+
+          if (!team.agentIds.every((agentId) => remoteAgentIds.has(agentId))) {
+            throw new Error(`Could not migrate team ${team.id}: missing members`);
+          }
+
+          const createResponse = await fetch(`/api/workspaces/${company.id}/teams`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id: team.id,
+              name: team.name,
+              description: team.description,
+              agentIds: team.agentIds,
+            }),
+          });
+          if (!createResponse.ok) {
+            throw new Error(`Could not migrate team ${team.id}`);
+          }
+          remoteTeamIds.add(team.id);
+          changed = true;
+        }
+
+        const remoteCompany = remoteCompaniesById.get(company.id);
+        if (
+          remoteCompany?.name !== company.name ||
+          remoteCompany?.description !== company.description ||
+          remoteCompany?.defaultAgentId !== company.defaultAgentId
+        ) {
+          const updateResponse = await fetch(`/api/workspaces/${company.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: company.name,
+              description: company.description,
+              defaultAgentId: company.defaultAgentId ?? null,
+            }),
+          });
+          if (!updateResponse.ok) {
+            throw new Error(`Could not finalize workspace migration for ${company.id}`);
+          }
+          changed = true;
+        }
+      }
+
+      await clearStorageScope(scope);
+      return changed || localCompanies.length > 0;
+    },
+    []
+  );
+
+  const hydrateWorkspaceState = useCallback(
+    async (
+      snapshot: WorkspaceMetadataResponse,
+      options?: {
+        preferredCompanyId?: string | null;
+        preferredTarget?: ChatTarget | null;
+      }
+    ) => {
+      const nextCompanyId =
+        options?.preferredCompanyId &&
+        snapshot.companies.some((company) => company.id === options.preferredCompanyId)
+          ? options.preferredCompanyId
+          : snapshot.companies[0]?.id ?? null;
+
+      dispatch({ type: "SET_COMPANIES", companies: snapshot.companies });
+      dispatch({ type: "SET_AGENTS", agents: snapshot.agents });
+      dispatch({ type: "SET_TEAMS", teams: snapshot.teams });
+      dispatch({ type: "SET_ACTIVE_COMPANY", id: nextCompanyId });
+
+      if (!nextCompanyId) {
+        dispatch({ type: "SET_CHAT_TARGET", target: null });
+        dispatch({ type: "SET_MESSAGES", messages: [] });
         return;
       }
 
-      const current = stateRef.current;
-      const agentId = lobster.agent_id || `lobster-${lobster.id.slice(0, 8)}`;
-      const existingCompany = findLocalLobsterCompany(lobster, current.companies);
-      const companyId = existingCompany?.id ?? lobster.id;
-      const existingAgent = current.agents.find((entry) => entry.id === agentId);
-
-      const company: Company = {
-        id: companyId,
-        name: `${lobster.name} Workspace`,
-        description: `Hosted workspace for ${lobster.name}.`,
-        defaultAgentId: agentId,
-        createdAt: Date.parse(lobster.created_at) || Date.now(),
-        updatedAt: Date.parse(lobster.updated_at) || Date.now(),
-      };
-
-      const agent: Agent = {
-        id: agentId,
-        companyId,
-        name: lobster.name,
-        description: `${lobster.name} lobster`,
-        specialty:
-          (lobster.role as AgentSpecialty | null) && [
-            "coding",
-            "research",
-            "writing",
-            "design",
-            "general",
-          ].includes(lobster.role as string)
-            ? (lobster.role as AgentSpecialty)
-            : "general",
-        createdAt: Date.parse(lobster.created_at) || Date.now(),
-      };
-
-      if (!existingCompany) {
-        await dbCreateCompany(syncScope, company);
-        dispatch({ type: "ADD_COMPANY", company });
-      } else {
-        const companyUpdates: Partial<Company> = {};
-        if (existingCompany.name !== company.name) {
-          companyUpdates.name = company.name;
-        }
-        if (existingCompany.description !== company.description) {
-          companyUpdates.description = company.description;
-        }
-        if (existingCompany.defaultAgentId !== agentId) {
-          companyUpdates.defaultAgentId = agentId;
-        }
-        if (Object.keys(companyUpdates).length > 0) {
-          await dbUpdateCompany(syncScope, existingCompany.id, companyUpdates);
-          dispatch({ type: "UPDATE_COMPANY", id: existingCompany.id, updates: companyUpdates });
-        }
-      }
-
-      if (!existingAgent) {
-        await dbCreateAgent(syncScope, agent);
-        dispatch({ type: "ADD_AGENT", agent });
-      } else {
-        const agentUpdates: Partial<Agent> = {};
-        if (existingAgent.companyId !== companyId) {
-          agentUpdates.companyId = companyId;
-        }
-        if (existingAgent.name !== agent.name) {
-          agentUpdates.name = agent.name;
-        }
-        if (existingAgent.description !== agent.description) {
-          agentUpdates.description = agent.description;
-        }
-        if (existingAgent.specialty !== agent.specialty) {
-          agentUpdates.specialty = agent.specialty;
-        }
-        if (Object.keys(agentUpdates).length > 0) {
-          await dbUpdateAgent(syncScope, existingAgent.id, agentUpdates);
-          dispatch({ type: "UPDATE_AGENT", id: existingAgent.id, updates: agentUpdates });
-        }
-      }
-    }
-
-    const latest = stateRef.current;
-    if (!latest.activeCompanyId && lobsters[0]) {
-      const firstLobster = lobsters[0];
-      const firstAgentId = firstLobster.agent_id || `lobster-${firstLobster.id.slice(0, 8)}`;
-      const firstCompany =
-        findLocalLobsterCompany(firstLobster, latest.companies) ??
-        latest.companies.find((entry) => entry.id === firstLobster.id);
-
-      if (firstCompany) {
-        dispatch({ type: "SET_ACTIVE_COMPANY", id: firstCompany.id });
-        dispatch({
-          type: "SET_CHAT_TARGET",
-          target: { type: "agent", id: firstAgentId },
-        });
-      }
-    }
-  }, [findLocalLobsterCompany]);
-
-  const fetchRemoteLobsters = useCallback(async () => {
-    const response = await fetch("/api/lobsters", { cache: "no-store" });
-    if (!response.ok) {
-      throw new Error("Could not load lobsters");
-    }
-    const payload = (await response.json()) as { lobsters: LobsterRecord[] };
-    return payload.lobsters;
-  }, []);
-
-  const mergeSyncedLobsters = useCallback((base: LobsterRecord[], additions: LobsterRecord[]) => {
-    const merged = new Map(base.map((lobster) => [lobster.id, lobster]));
-    for (const lobster of additions) {
-      merged.set(lobster.id, lobster);
-    }
-    return [...merged.values()];
-  }, []);
-
-  const syncLocalLobstersToRemote = useCallback(async (remoteLobsters: LobsterRecord[]) => {
-    const syncScope = storageScopeRef.current;
-    const current = stateRef.current;
-    const remoteIds = new Set(remoteLobsters.map((lobster) => lobster.id));
-    const remoteAgentIds = new Set(
-      remoteLobsters
-        .map((lobster) => lobster.agent_id)
-        .filter((agentId): agentId is string => Boolean(agentId))
-    );
-    const syncedLobsters: LobsterRecord[] = [];
-
-    for (const company of current.companies) {
-      if (syncScope !== storageScopeRef.current) {
-        return syncedLobsters;
-      }
-
-      const defaultAgentId = company.defaultAgentId;
-      if (!defaultAgentId) {
-        continue;
-      }
-
-      if (remoteIds.has(company.id) || remoteAgentIds.has(defaultAgentId)) {
-        continue;
-      }
-
-      const agent = current.agents.find(
-        (entry) => entry.id === defaultAgentId && entry.companyId === company.id
+      const nextTarget = resolvePreferredChatTarget(
+        snapshot,
+        nextCompanyId,
+        options?.preferredTarget
       );
-      if (!agent) {
-        continue;
+      dispatch({ type: "SET_CHAT_TARGET", target: nextTarget });
+
+      if (!nextTarget) {
+        dispatch({ type: "SET_MESSAGES", messages: [] });
+        return;
       }
 
-      const response = await fetch("/api/lobsters", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: company.id,
-          name: agent.name,
-          role: agent.specialty,
-          agentId: agent.id,
-          status: "active",
-        }),
-      });
+      const messages = await loadWorkspaceMessages(
+        nextCompanyId,
+        nextTarget,
+        snapshot.teams
+      );
+      dispatch({ type: "SET_MESSAGES", messages });
+    },
+    [loadWorkspaceMessages]
+  );
 
-      if (!response.ok) {
-        throw new Error("Could not sync lobster");
-      }
-
-      const payload = (await response.json()) as { lobster?: LobsterRecord | null };
-      if (payload.lobster) {
-        syncedLobsters.push(payload.lobster);
-      }
-
-      remoteIds.add(company.id);
-      remoteAgentIds.add(agent.id);
-    }
-
-    return syncedLobsters;
-  }, []);
-
-  // ── Resolve agentId from sessionKey ───────────────────────────
+  const refreshWorkspaceState = useCallback(
+    async (options?: {
+      preferredCompanyId?: string | null;
+      preferredTarget?: ChatTarget | null;
+    }) => {
+      const snapshot = await fetchWorkspaceMetadata();
+      await hydrateWorkspaceState(snapshot, options);
+      return snapshot;
+    },
+    [fetchWorkspaceMetadata, hydrateWorkspaceState]
+  );
 
   const resolveAgentFromSession = useCallback((sessionKey: string): string | null => {
     const match = sessionKey.match(/^agent:([^:]+):/);
     return match ? match[1] : null;
   }, []);
 
-  // ── Gateway connection ───────────────────────────────────────
-
   const connectGateway = useCallback(() => {
     const current = stateRef.current;
-    if (!current.activeCompanyId) return;
-    const connectionScope = storageScopeRef.current;
+    if (!current.activeCompanyId) {
+      return;
+    }
 
     if (gatewayRef.current) {
       gatewayRef.current.destroy();
@@ -507,21 +562,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
     client.configure({
       onConnectionStatus: (status: ConnectionStatus) => {
-        if (connectionScope !== storageScopeRef.current) {
-          return;
-        }
         dispatch({ type: "SET_CONNECTION_STATUS", status });
       },
       onChatEvent: (payload: ChatEventPayload) => {
-        if (connectionScope !== storageScopeRef.current) {
+        const agentId = resolveAgentFromSession(payload.sessionKey);
+        if (!agentId) {
           return;
         }
 
-        const agentId = resolveAgentFromSession(payload.sessionKey);
-        if (!agentId) return;
-
-        const current = stateRef.current;
-        const streaming = current.streamingStates[agentId];
+        const currentState = stateRef.current;
+        const streaming = currentState.streamingStates[agentId];
         const text = payload.message?.content?.[0]?.text ?? "";
 
         switch (payload.state) {
@@ -534,10 +584,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             });
             break;
           }
+
           case "final": {
             const finalText = text || streaming?.content || "";
             if (finalText && streaming) {
-              const msg: Message = {
+              const message: Message = {
                 id: uuidv4(),
                 targetType: streaming.targetType,
                 targetId: streaming.targetId,
@@ -546,14 +597,22 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
                 content: finalText,
                 createdAt: payload.message?.timestamp ?? Date.now(),
               };
-              addMessage(connectionScope, msg).then(() => {
-                const s = stateRef.current;
-                if (s.activeChatTarget?.type === streaming.targetType && s.activeChatTarget?.id === streaming.targetId) {
-                  dispatch({ type: "ADD_MESSAGE", message: msg });
-                }
-              });
+              const activeState = stateRef.current;
+              if (
+                activeState.activeChatTarget?.type === streaming.targetType &&
+                activeState.activeChatTarget?.id === streaming.targetId
+              ) {
+                dispatch({ type: "ADD_MESSAGE", message });
+              }
             }
-            dispatch({ type: "SET_STREAMING", agentId, targetType: streaming?.targetType ?? "agent", targetId: streaming?.targetId ?? "", sessionKey: "", isStreaming: false });
+            dispatch({
+              type: "SET_STREAMING",
+              agentId,
+              targetType: streaming?.targetType ?? "agent",
+              targetId: streaming?.targetId ?? "",
+              sessionKey: "",
+              isStreaming: false,
+            });
             const finalResolver = pendingStreamResolvers.current.get(agentId);
             if (finalResolver) {
               pendingStreamResolvers.current.delete(agentId);
@@ -561,26 +620,35 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             }
             break;
           }
+
           case "error": {
-            const errText = payload.error || text || "An error occurred";
+            const errorText = payload.error || text || "An error occurred";
             if (streaming) {
-              const msg: Message = {
+              const message: Message = {
                 id: uuidv4(),
                 targetType: streaming.targetType,
                 targetId: streaming.targetId,
                 role: "assistant",
                 agentId,
-                content: `Error: ${errText}`,
+                content: `Error: ${errorText}`,
                 createdAt: Date.now(),
               };
-              addMessage(connectionScope, msg).then(() => {
-                const s = stateRef.current;
-                if (s.activeChatTarget?.type === streaming.targetType && s.activeChatTarget?.id === streaming.targetId) {
-                  dispatch({ type: "ADD_MESSAGE", message: msg });
-                }
-              });
+              const activeState = stateRef.current;
+              if (
+                activeState.activeChatTarget?.type === streaming.targetType &&
+                activeState.activeChatTarget?.id === streaming.targetId
+              ) {
+                dispatch({ type: "ADD_MESSAGE", message });
+              }
             }
-            dispatch({ type: "SET_STREAMING", agentId, targetType: streaming?.targetType ?? "agent", targetId: streaming?.targetId ?? "", sessionKey: "", isStreaming: false });
+            dispatch({
+              type: "SET_STREAMING",
+              agentId,
+              targetType: streaming?.targetType ?? "agent",
+              targetId: streaming?.targetId ?? "",
+              sessionKey: "",
+              isStreaming: false,
+            });
             const errorResolver = pendingStreamResolvers.current.get(agentId);
             if (errorResolver) {
               pendingStreamResolvers.current.delete(agentId);
@@ -588,10 +656,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             }
             break;
           }
+
           case "aborted": {
             const abortedText = streaming?.content;
             if (abortedText && streaming) {
-              const msg: Message = {
+              const message: Message = {
                 id: uuidv4(),
                 targetType: streaming.targetType,
                 targetId: streaming.targetId,
@@ -600,14 +669,22 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
                 content: abortedText,
                 createdAt: Date.now(),
               };
-              addMessage(connectionScope, msg).then(() => {
-                const s = stateRef.current;
-                if (s.activeChatTarget?.type === streaming.targetType && s.activeChatTarget?.id === streaming.targetId) {
-                  dispatch({ type: "ADD_MESSAGE", message: msg });
-                }
-              });
+              const activeState = stateRef.current;
+              if (
+                activeState.activeChatTarget?.type === streaming.targetType &&
+                activeState.activeChatTarget?.id === streaming.targetId
+              ) {
+                dispatch({ type: "ADD_MESSAGE", message });
+              }
             }
-            dispatch({ type: "SET_STREAMING", agentId, targetType: streaming?.targetType ?? "agent", targetId: streaming?.targetId ?? "", sessionKey: "", isStreaming: false });
+            dispatch({
+              type: "SET_STREAMING",
+              agentId,
+              targetType: streaming?.targetType ?? "agent",
+              targetId: streaming?.targetId ?? "",
+              sessionKey: "",
+              isStreaming: false,
+            });
             const abortedResolver = pendingStreamResolvers.current.get(agentId);
             if (abortedResolver) {
               pendingStreamResolvers.current.delete(agentId);
@@ -637,198 +714,306 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: "RESET_STATE" });
   }, [disconnectGateway]);
 
-  // ── Actions ───────────────────────────────────────────────────────
-
-  const createCompanyAction = useCallback(async (name: string, description?: string) => {
-    const now = Date.now();
-    const company: Company = {
-      id: uuidv4(),
-      name,
-      description,
-      createdAt: now,
-      updatedAt: now,
-    };
-    await dbCreateCompany(storageScopeRef.current, company);
-    dispatch({ type: "ADD_COMPANY", company });
-    return company;
-  }, []);
-
-  const updateCompanyAction = useCallback(async (id: string, updates: Partial<Company>) => {
-    await dbUpdateCompany(storageScopeRef.current, id, updates);
-    dispatch({ type: "UPDATE_COMPANY", id, updates });
-  }, []);
-
-  const deleteCompanyAction = useCallback(async (id: string) => {
-    const current = stateRef.current;
-    if (current.activeCompanyId === id) {
-      disconnectGateway();
-    }
-    await dbDeleteCompany(storageScopeRef.current, id);
-    dispatch({ type: "REMOVE_COMPANY", id });
-  }, [disconnectGateway]);
-
-  const selectCompanyAction = useCallback(async (id: string) => {
-    const current = stateRef.current;
-    const company = current.companies.find((entry) => entry.id === id);
-
-    disconnectGateway();
-    dispatch({ type: "SET_ACTIVE_COMPANY", id });
-
-    const [agents, teams] = await Promise.all([
-      getAgentsByCompany(storageScopeRef.current, id),
-      getTeamsByCompany(storageScopeRef.current, id),
-    ]);
-    dispatch({ type: "SET_AGENTS", agents });
-    dispatch({ type: "SET_TEAMS", teams });
-
-    if (company?.defaultAgentId && agents.some((agent) => agent.id === company.defaultAgentId)) {
-      dispatch({
-        type: "SET_CHAT_TARGET",
-        target: { type: "agent", id: company.defaultAgentId },
-      });
-      const messages = await getMessagesByTarget(
-        storageScopeRef.current,
-        "agent",
-        company.defaultAgentId
-      );
-      dispatch({ type: "SET_MESSAGES", messages });
-    }
-
-    setTimeout(() => connectGateway(), 50);
-  }, [disconnectGateway, connectGateway]);
-
-  const createAgentAction = useCallback(async (opts: {
-    companyId: string;
-    name: string;
-    description: string;
-    specialty: AgentSpecialty;
-  }) => {
-    const current = stateRef.current;
-    const companyAgents = current.agents.filter((a) => a.companyId === opts.companyId);
-    const baseSlug = opts.name
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "") || "agent";
-    let agentId = baseSlug;
-    let counter = 2;
-    while (companyAgents.some((a) => a.id === agentId)) {
-      agentId = `${baseSlug}-${counter}`;
-      counter += 1;
-    }
-
-    const agent: Agent = {
-      id: agentId,
-      companyId: opts.companyId,
-      name: opts.name,
-      description: opts.description,
-      specialty: opts.specialty,
-      createdAt: Date.now(),
-    };
-
-    await dbCreateAgent(storageScopeRef.current, agent);
-    dispatch({ type: "ADD_AGENT", agent });
-
-    try {
-      await fetch("/api/agents/create", {
+  const createCompanyAction = useCallback(
+    async (name: string, description?: string) => {
+      const response = await fetch("/api/workspaces", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          companyId: opts.companyId,
-          agentId: agent.id,
-          name: agent.name,
-          description: agent.description,
-          specialty: agent.specialty,
+          name,
+          description,
         }),
       });
-    } catch {
-      // Non-critical
-    }
 
-    return agent;
-  }, []);
-
-  const updateAgentAction = useCallback(async (id: string, updates: Partial<Agent>) => {
-    await dbUpdateAgent(storageScopeRef.current, id, updates);
-    dispatch({ type: "UPDATE_AGENT", id, updates });
-  }, []);
-
-  const deleteAgentAction = useCallback(async (id: string) => {
-    const current = stateRef.current;
-    const deletedAgent = current.agents.find((agent) => agent.id === id);
-
-    await dbDeleteAgent(storageScopeRef.current, id);
-    dispatch({ type: "REMOVE_AGENT", id });
-
-    if (deletedAgent) {
-      const company = current.companies.find((entry) => entry.id === deletedAgent.companyId);
-      if (company?.defaultAgentId === id) {
-        const fallbackAgentId = current.agents.find(
-          (agent) => agent.companyId === deletedAgent.companyId && agent.id !== id
-        )?.id;
-        const updates = { defaultAgentId: fallbackAgentId };
-
-        await dbUpdateCompany(storageScopeRef.current, deletedAgent.companyId, updates);
-        dispatch({ type: "UPDATE_COMPANY", id: deletedAgent.companyId, updates });
-      }
-    }
-
-    try {
-      if (!deletedAgent) {
-        throw new Error("Missing deleted agent context");
+      if (!response.ok) {
+        throw new Error("Could not create workspace");
       }
 
-      await fetch("/api/agents/delete", {
+      const payload = (await response.json()) as { company: Company };
+      await refreshWorkspaceState({
+        preferredCompanyId: payload.company.id,
+        preferredTarget: null,
+      });
+      return payload.company;
+    },
+    [refreshWorkspaceState]
+  );
+
+  const updateCompanyAction = useCallback(
+    async (id: string, updates: Partial<Company>) => {
+      const response = await fetch(`/api/workspaces/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: updates.name,
+          description: updates.description,
+          defaultAgentId:
+            Object.prototype.hasOwnProperty.call(updates, "defaultAgentId")
+              ? updates.defaultAgentId ?? null
+              : undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Could not update workspace");
+      }
+
+      const current = stateRef.current;
+      await refreshWorkspaceState({
+        preferredCompanyId: current.activeCompanyId ?? id,
+        preferredTarget: current.activeChatTarget,
+      });
+    },
+    [refreshWorkspaceState]
+  );
+
+  const deleteCompanyAction = useCallback(
+    async (id: string) => {
+      const current = stateRef.current;
+      if (current.activeCompanyId === id) {
+        disconnectGateway();
+      }
+
+      const response = await fetch(`/api/workspaces/${id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        throw new Error("Could not delete workspace");
+      }
+
+      const preferredCompanyId =
+        current.activeCompanyId === id
+          ? current.companies.find((company) => company.id !== id)?.id ?? null
+          : current.activeCompanyId;
+
+      await refreshWorkspaceState({
+        preferredCompanyId,
+        preferredTarget:
+          current.activeCompanyId === id ? null : current.activeChatTarget,
+      });
+    },
+    [disconnectGateway, refreshWorkspaceState]
+  );
+
+  const selectCompanyAction = useCallback(
+    async (id: string) => {
+      const current = stateRef.current;
+      const company = current.companies.find((entry) => entry.id === id);
+
+      disconnectGateway();
+      dispatch({ type: "SET_ACTIVE_COMPANY", id });
+
+      const nextTarget = company
+        ? resolvePreferredChatTarget(current, id, null)
+        : null;
+      dispatch({ type: "SET_CHAT_TARGET", target: nextTarget });
+
+      if (!nextTarget) {
+        dispatch({ type: "SET_MESSAGES", messages: [] });
+      } else {
+        const messages = await loadWorkspaceMessages(id, nextTarget, current.teams);
+        dispatch({ type: "SET_MESSAGES", messages });
+      }
+
+      setTimeout(() => connectGateway(), 50);
+    },
+    [connectGateway, disconnectGateway, loadWorkspaceMessages]
+  );
+
+  const createAgentAction = useCallback(
+    async (opts: {
+      companyId: string;
+      name: string;
+      description: string;
+      specialty: AgentSpecialty;
+    }) => {
+      const response = await fetch(`/api/workspaces/${opts.companyId}/agents`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ companyId: deletedAgent.companyId, agentId: id }),
+        body: JSON.stringify(opts),
       });
-    } catch {
-      // Non-critical
-    }
 
-    // Clear chat if this was the active target
-    if (current.activeChatTarget?.type === "agent" && current.activeChatTarget?.id === id) {
-      dispatch({ type: "SET_CHAT_TARGET", target: null });
-      dispatch({ type: "SET_MESSAGES", messages: [] });
-    }
-  }, []);
+      if (!response.ok) {
+        throw new Error("Could not create agent");
+      }
 
-  const createTeamAction = useCallback(async (opts: { companyId: string; name: string; description?: string; agentIds: string[] }) => {
-    const team: AgentTeam = {
-      id: uuidv4(),
-      companyId: opts.companyId,
-      name: opts.name,
-      description: opts.description,
-      agentIds: opts.agentIds,
-      createdAt: Date.now(),
-    };
-    await dbCreateTeam(storageScopeRef.current, team);
-    dispatch({ type: "ADD_TEAM", team });
-    return team;
-  }, []);
+      const payload = (await response.json()) as { agent: Agent };
+      const current = stateRef.current;
+      await refreshWorkspaceState({
+        preferredCompanyId: current.activeCompanyId ?? opts.companyId,
+        preferredTarget: current.activeChatTarget,
+      });
+      return payload.agent;
+    },
+    [refreshWorkspaceState]
+  );
 
-  const updateTeamAction = useCallback(async (id: string, updates: Partial<AgentTeam>) => {
-    await dbUpdateTeam(storageScopeRef.current, id, updates);
-    dispatch({ type: "UPDATE_TEAM", id, updates });
-  }, []);
+  const updateAgentAction = useCallback(
+    async (id: string, updates: Partial<Agent>) => {
+      const current = stateRef.current;
+      const agent = current.agents.find((entry) => entry.id === id);
+      if (!agent) {
+        return;
+      }
 
-  const deleteTeamAction = useCallback(async (id: string) => {
-    await dbDeleteTeam(storageScopeRef.current, id);
-    dispatch({ type: "REMOVE_TEAM", id });
-    const current = stateRef.current;
-    if (current.activeChatTarget?.type === "team" && current.activeChatTarget?.id === id) {
-      dispatch({ type: "SET_CHAT_TARGET", target: null });
-      dispatch({ type: "SET_MESSAGES", messages: [] });
-    }
-  }, []);
+      const response = await fetch(`/api/workspaces/${agent.companyId}/agents/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: updates.name,
+          description: updates.description,
+          specialty: updates.specialty,
+        }),
+      });
 
-  const selectChatTargetAction = useCallback(async (target: ChatTarget) => {
-    dispatch({ type: "SET_ACTIVE_VIEW", view: "chat" });
-    dispatch({ type: "SET_CHAT_TARGET", target });
-    const msgs = await getMessagesByTarget(storageScopeRef.current, target.type, target.id);
-    dispatch({ type: "SET_MESSAGES", messages: msgs });
-  }, []);
+      if (!response.ok) {
+        throw new Error("Could not update agent");
+      }
+
+      await refreshWorkspaceState({
+        preferredCompanyId: current.activeCompanyId ?? agent.companyId,
+        preferredTarget: current.activeChatTarget,
+      });
+    },
+    [refreshWorkspaceState]
+  );
+
+  const deleteAgentAction = useCallback(
+    async (id: string) => {
+      const current = stateRef.current;
+      const deletedAgent = current.agents.find((agent) => agent.id === id);
+      if (!deletedAgent) {
+        return;
+      }
+
+      const response = await fetch(
+        `/api/workspaces/${deletedAgent.companyId}/agents/${id}`,
+        { method: "DELETE" }
+      );
+      if (!response.ok) {
+        throw new Error("Could not delete agent");
+      }
+
+      const preferredTarget =
+        current.activeChatTarget?.type === "agent" && current.activeChatTarget.id === id
+          ? null
+          : current.activeChatTarget;
+
+      await refreshWorkspaceState({
+        preferredCompanyId: current.activeCompanyId ?? deletedAgent.companyId,
+        preferredTarget,
+      });
+    },
+    [refreshWorkspaceState]
+  );
+
+  const createTeamAction = useCallback(
+    async (opts: {
+      companyId: string;
+      name: string;
+      description?: string;
+      agentIds: string[];
+    }) => {
+      const response = await fetch(`/api/workspaces/${opts.companyId}/teams`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(opts),
+      });
+
+      if (!response.ok) {
+        throw new Error("Could not create team");
+      }
+
+      const payload = (await response.json()) as { team: AgentTeam };
+      const current = stateRef.current;
+      await refreshWorkspaceState({
+        preferredCompanyId: current.activeCompanyId ?? opts.companyId,
+        preferredTarget: current.activeChatTarget,
+      });
+      return payload.team;
+    },
+    [refreshWorkspaceState]
+  );
+
+  const updateTeamAction = useCallback(
+    async (id: string, updates: Partial<AgentTeam>) => {
+      const current = stateRef.current;
+      const team = current.teams.find((entry) => entry.id === id);
+      if (!team) {
+        return;
+      }
+
+      const response = await fetch(`/api/workspaces/${team.companyId}/teams/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: updates.name,
+          description: updates.description,
+          agentIds: updates.agentIds,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Could not update team");
+      }
+
+      await refreshWorkspaceState({
+        preferredCompanyId: current.activeCompanyId ?? team.companyId,
+        preferredTarget: current.activeChatTarget,
+      });
+    },
+    [refreshWorkspaceState]
+  );
+
+  const deleteTeamAction = useCallback(
+    async (id: string) => {
+      const current = stateRef.current;
+      const team = current.teams.find((entry) => entry.id === id);
+      if (!team) {
+        return;
+      }
+
+      const response = await fetch(`/api/workspaces/${team.companyId}/teams/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Could not delete team");
+      }
+
+      const preferredTarget =
+        current.activeChatTarget?.type === "team" && current.activeChatTarget.id === id
+          ? null
+          : current.activeChatTarget;
+
+      await refreshWorkspaceState({
+        preferredCompanyId: current.activeCompanyId ?? team.companyId,
+        preferredTarget,
+      });
+    },
+    [refreshWorkspaceState]
+  );
+
+  const selectChatTargetAction = useCallback(
+    async (target: ChatTarget) => {
+      const current = stateRef.current;
+      dispatch({ type: "SET_ACTIVE_VIEW", view: "chat" });
+      dispatch({ type: "SET_CHAT_TARGET", target });
+
+      if (!current.activeCompanyId) {
+        dispatch({ type: "SET_MESSAGES", messages: [] });
+        return;
+      }
+
+      const messages = await loadWorkspaceMessages(
+        current.activeCompanyId,
+        target,
+        current.teams
+      );
+      dispatch({ type: "SET_MESSAGES", messages });
+    },
+    [loadWorkspaceMessages]
+  );
 
   const setActiveViewAction = useCallback((view: WorkspaceView) => {
     dispatch({ type: "SET_ACTIVE_VIEW", view });
@@ -837,13 +1022,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const sendMessageAction = useCallback(async (content: string) => {
     const current = stateRef.current;
     const target = current.activeChatTarget;
-    if (!target) return;
-    const messageScope = storageScopeRef.current;
+    if (!target) {
+      return;
+    }
 
     const client = gatewayRef.current;
-    if (!client || !client.isConnected()) return;
+    if (!client || !client.isConnected()) {
+      return;
+    }
 
-    const userMsg: Message = {
+    const userMessage: Message = {
       id: uuidv4(),
       targetType: target.type,
       targetId: target.id,
@@ -851,8 +1039,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       content,
       createdAt: Date.now(),
     };
-    await addMessage(messageScope, userMsg);
-    dispatch({ type: "ADD_MESSAGE", message: userMsg });
+    dispatch({ type: "ADD_MESSAGE", message: userMessage });
 
     if (target.type === "agent") {
       const sessionKey = dmSessionKey(target.id);
@@ -867,81 +1054,104 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       try {
         await client.sendMessage(sessionKey, content);
       } catch {
-        dispatch({ type: "SET_STREAMING", agentId: target.id, targetType: "agent", targetId: target.id, sessionKey, isStreaming: false });
+        dispatch({
+          type: "SET_STREAMING",
+          agentId: target.id,
+          targetType: "agent",
+          targetId: target.id,
+          sessionKey,
+          isStreaming: false,
+        });
       }
-    } else {
-      const team = current.teams.find((t) => t.id === target.id);
-      if (!team) return;
+      return;
+    }
 
-      const STREAM_TIMEOUT = 5 * 60 * 1000; // 5 minutes
+    const team = current.teams.find((entry) => entry.id === target.id);
+    if (!team) {
+      return;
+    }
 
-      // Build full team conversation history from existing messages
-      const teamHistory = current.messages
-        .filter(m => m.targetType === "team" && m.targetId === target.id)
-        .map(m => {
-          if (m.role === "user") return `[User]: ${m.content}`;
-          const agent = current.agents.find(a => a.id === m.agentId);
-          return `[${agent?.name || m.agentId || "Assistant"}]: ${m.content}`;
-        })
-        .join("\n\n");
+    const streamTimeout = 5 * 60 * 1000;
+    const teamHistory = current.messages
+      .filter((message) => message.targetType === "team" && message.targetId === target.id)
+      .map((message) => {
+        if (message.role === "user") {
+          return `[User]: ${message.content}`;
+        }
+        const agent = current.agents.find((entry) => entry.id === message.agentId);
+        return `[${agent?.name || message.agentId || "Assistant"}]: ${message.content}`;
+      })
+      .join("\n\n");
 
-      const currentRoundReplies: Array<{ agentName: string; content: string }> = [];
+    const currentRoundReplies: Array<{ agentName: string; content: string }> = [];
 
-      for (const agentId of team.agentIds) {
-        const sessionKey = teamSessionKey(agentId, target.id);
+    for (const agentId of team.agentIds) {
+      const sessionKey = teamSessionKey(agentId, target.id);
+      dispatch({
+        type: "SET_STREAMING",
+        agentId,
+        targetType: "team",
+        targetId: target.id,
+        sessionKey,
+        isStreaming: true,
+      });
+
+      try {
+        let messageToSend = content;
+        const contextParts: string[] = [];
+
+        if (teamHistory) {
+          contextParts.push(`[Team conversation history]\n${teamHistory}`);
+        }
+
+        if (currentRoundReplies.length > 0) {
+          const roundContext = currentRoundReplies
+            .map((reply) => `[${reply.agentName}]: ${reply.content}`)
+            .join("\n\n");
+          contextParts.push(`[Current round replies]\n${roundContext}`);
+        }
+
+        if (contextParts.length > 0) {
+          messageToSend = `${contextParts.join("\n\n")}\n\n[New user message]\n${content}`;
+        }
+
+        await client.sendMessage(sessionKey, messageToSend);
+
+        await Promise.race([
+          new Promise<void>((resolve) => {
+            pendingStreamResolvers.current.set(agentId, resolve);
+          }),
+          new Promise<void>((resolve) =>
+            setTimeout(() => {
+              pendingStreamResolvers.current.delete(agentId);
+              resolve();
+            }, streamTimeout)
+          ),
+        ]);
+
+        const latestState = stateRef.current;
+        const agentReply = [...latestState.messages].reverse().find(
+          (message) =>
+            message.role === "assistant" &&
+            message.agentId === agentId &&
+            message.targetId === target.id
+        );
+        if (agentReply) {
+          const agent = latestState.agents.find((entry) => entry.id === agentId);
+          currentRoundReplies.push({
+            agentName: agent?.name || agentId,
+            content: agentReply.content,
+          });
+        }
+      } catch {
         dispatch({
           type: "SET_STREAMING",
           agentId,
           targetType: "team",
           targetId: target.id,
           sessionKey,
-          isStreaming: true,
+          isStreaming: false,
         });
-        try {
-          // Build full context: history + current round replies + new message
-          let messageToSend = content;
-          const contextParts: string[] = [];
-
-          if (teamHistory) {
-            contextParts.push(`[Team conversation history]\n${teamHistory}`);
-          }
-
-          if (currentRoundReplies.length > 0) {
-            const roundContext = currentRoundReplies
-              .map(r => `[${r.agentName}]: ${r.content}`)
-              .join("\n\n");
-            contextParts.push(`[Current round replies]\n${roundContext}`);
-          }
-
-          if (contextParts.length > 0) {
-            messageToSend = `${contextParts.join("\n\n")}\n\n[New user message]\n${content}`;
-          }
-
-          await client.sendMessage(sessionKey, messageToSend);
-
-          // Wait for this agent's streaming to complete before sending to the next
-          await Promise.race([
-            new Promise<void>((resolve) => {
-              pendingStreamResolvers.current.set(agentId, resolve);
-            }),
-            new Promise<void>((resolve) => setTimeout(() => {
-              pendingStreamResolvers.current.delete(agentId);
-              resolve();
-            }, STREAM_TIMEOUT)),
-          ]);
-
-          // Collect this agent's reply for the next agent's context in this round
-          const latestState = stateRef.current;
-          const agentReply = [...latestState.messages].reverse().find(
-            (m) => m.role === "assistant" && m.agentId === agentId && m.targetId === target.id
-          );
-          if (agentReply) {
-            const agent = latestState.agents.find((a) => a.id === agentId);
-            currentRoundReplies.push({ agentName: agent?.name || agentId, content: agentReply.content });
-          }
-        } catch {
-          dispatch({ type: "SET_STREAMING", agentId, targetType: "team", targetId: target.id, sessionKey, isStreaming: false });
-        }
       }
     }
   }, []);
@@ -949,15 +1159,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const abortStreamingAction = useCallback(async (agentId: string) => {
     const current = stateRef.current;
     const streaming = current.streamingStates[agentId];
-    if (!streaming) return;
+    if (!streaming) {
+      return;
+    }
 
     const client = gatewayRef.current;
-    if (client) {
-      try {
-        await client.abortChat(streaming.sessionKey, streaming.runId ?? undefined);
-      } catch {
-        dispatch({ type: "CLEAR_STREAMING", agentId });
-      }
+    if (!client) {
+      return;
+    }
+
+    try {
+      await client.abortChat(streaming.sessionKey, streaming.runId ?? undefined);
+    } catch {
+      dispatch({ type: "CLEAR_STREAMING", agentId });
     }
   }, []);
 
@@ -967,11 +1181,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       disconnectGateway();
       setTimeout(() => connectGateway(), 2000);
     } catch {
-      // Failed to restart
+      // Failed to restart.
     }
-  }, [disconnectGateway, connectGateway]);
-
-  // ── Init ────────────────────────────────────────────────────────
+  }, [connectGateway, disconnectGateway]);
 
   useEffect(() => {
     let cancelled = false;
@@ -983,102 +1195,50 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const previousUserId = previousUserIdRef.current;
       previousUserIdRef.current = currentUserId;
 
-      await purgeLegacyLocalDatabase();
-
       if (previousUserId !== undefined && previousUserId !== currentUserId) {
-        await clearAllStorageScopes();
         clearAllOnboardingState();
       }
 
-      const companies = await getAllCompanies(storageScopeRef.current);
-      if (cancelled) {
+      if (!currentUserId) {
+        dispatch({ type: "SET_INITIALIZED" });
         return;
       }
 
-      const shouldBootstrap = companies.length === 0 && Boolean(currentUserId);
-
-      if (companies.length > 0) {
-        dispatch({ type: "SET_COMPANIES", companies });
-        const firstCompany = companies[0];
-        const firstId = firstCompany.id;
-        dispatch({ type: "SET_ACTIVE_COMPANY", id: firstId });
-
-        const [agents, teams] = await Promise.all([
-          getAgentsByCompany(storageScopeRef.current, firstId),
-          getTeamsByCompany(storageScopeRef.current, firstId),
-        ]);
+      try {
+        let snapshot = await fetchWorkspaceMetadata();
         if (cancelled) {
           return;
         }
-        dispatch({ type: "SET_AGENTS", agents });
-        dispatch({ type: "SET_TEAMS", teams });
 
-        if (
-          firstCompany.defaultAgentId &&
-          agents.some((agent) => agent.id === firstCompany.defaultAgentId)
-        ) {
-          dispatch({
-            type: "SET_CHAT_TARGET",
-            target: { type: "agent", id: firstCompany.defaultAgentId },
-          });
-          const messages = await getMessagesByTarget(
-            storageScopeRef.current,
-            "agent",
-            firstCompany.defaultAgentId
-          );
-          dispatch({ type: "SET_MESSAGES", messages });
+        const migrated = await migrateLegacyLocalMetadata(currentUserId, snapshot);
+        if (cancelled) {
+          return;
+        }
+
+        if (migrated) {
+          snapshot = await fetchWorkspaceMetadata();
+          if (cancelled) {
+            return;
+          }
+        }
+
+        await hydrateWorkspaceState(snapshot, {
+          preferredCompanyId: null,
+          preferredTarget: null,
+        });
+      } catch {
+        if (!cancelled) {
+          dispatch({ type: "SET_COMPANIES", companies: [] });
+          dispatch({ type: "SET_AGENTS", agents: [] });
+          dispatch({ type: "SET_TEAMS", teams: [] });
+          dispatch({ type: "SET_ACTIVE_COMPANY", id: null });
+          dispatch({ type: "SET_CHAT_TARGET", target: null });
+          dispatch({ type: "SET_MESSAGES", messages: [] });
         }
       }
 
       if (!cancelled) {
         dispatch({ type: "SET_INITIALIZED" });
-      }
-
-      if (!shouldBootstrap) {
-        return;
-      }
-
-      // Keep gateway bootstrap off the critical path so remote workspace sync can start immediately.
-      try {
-        const res = await fetch("/api/bootstrap");
-        if (!res.ok) {
-          throw new Error("Could not bootstrap workspace");
-        }
-
-        const data = (await res.json()) as {
-          found?: boolean;
-          gateway?: { url?: string; hasToken?: boolean };
-          agents?: Array<{ id: string; name: string }>;
-        };
-
-        if (!cancelled && data.found) {
-          const companyId = uuidv4();
-          const company: Company = {
-            id: companyId,
-            name: "AI Operator Demo",
-            description: "Hosted OpenClaw demo workspace",
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
-          };
-          await dbCreateCompany(storageScopeRef.current, company);
-          dispatch({ type: "ADD_COMPANY", company });
-          dispatch({ type: "SET_ACTIVE_COMPANY", id: companyId });
-
-          for (const agentConfig of data.agents ?? []) {
-            const agent: Agent = {
-              id: agentConfig.id,
-              companyId,
-              name: agentConfig.name,
-              description: `OpenClaw agent: ${agentConfig.name}`,
-              specialty: "general" as AgentSpecialty,
-              createdAt: Date.now(),
-            };
-            await dbCreateAgent(storageScopeRef.current, agent);
-            dispatch({ type: "ADD_AGENT", agent });
-          }
-        }
-      } catch {
-        // Bootstrap failed, user can configure manually
       }
     }
 
@@ -1091,42 +1251,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       }
       cancelled = true;
     };
-  }, [resetLocalState, user?.id]);
-
-  useEffect(() => {
-    if (!state.initialized || !user?.id) {
-      return;
-    }
-
-    let cancelled = false;
-
-    async function syncRemoteLobsters() {
-      try {
-        const remoteLobsters = await fetchRemoteLobsters();
-        const syncedLobsters = await syncLocalLobstersToRemote(remoteLobsters);
-        if (!cancelled) {
-          await mergeRemoteLobsters(mergeSyncedLobsters(remoteLobsters, syncedLobsters));
-        }
-      } catch {
-        // Non-critical sync
-      }
-    }
-
-    void syncRemoteLobsters();
-
-    return () => {
-      cancelled = true;
-    };
   }, [
-    fetchRemoteLobsters,
-    mergeRemoteLobsters,
-    state.initialized,
-    mergeSyncedLobsters,
-    syncLocalLobstersToRemote,
+    fetchWorkspaceMetadata,
+    hydrateWorkspaceState,
+    migrateLegacyLocalMetadata,
+    resetLocalState,
     user?.id,
   ]);
 
-  // Connect gateway when company/config changes
   useEffect(() => {
     if (state.initialized && state.activeCompanyId) {
       connectGateway();
@@ -1160,10 +1292,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-// ── Hook ────────────────────────────────────────────────────────────
-
 export function useStore() {
-  const ctx = useContext(StoreContext);
-  if (!ctx) throw new Error("useStore must be used within StoreProvider");
-  return ctx;
+  const context = useContext(StoreContext);
+  if (!context) {
+    throw new Error("useStore must be used within StoreProvider");
+  }
+  return context;
 }

@@ -9,11 +9,9 @@ import {
   Square,
   Users,
 } from "lucide-react";
-import { useAuth } from "@/components/auth-provider";
 import { useStore } from "@/lib/store";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { cn } from "@/lib/utils";
-import { createAgent as dbCreateAgent, getStorageScope } from "@/lib/db";
 import {
   getAgentRoleKey,
   initializeOnboardingState,
@@ -47,9 +45,7 @@ export function ChatArea() {
   const t = useTranslations("workspace.chat");
   const workspaceT = useTranslations("workspace");
   const locale = useLocale();
-  const { user } = useAuth();
-  const { state, dispatch, actions } = useStore();
-  const storageScope = getStorageScope(user?.id ?? null);
+  const { state, actions } = useStore();
   const [input, setInput] = useState("");
   const [composing, setComposing] = useState(false);
   const [lobsterName, setLobsterName] = useState("");
@@ -207,17 +203,12 @@ export function ChatArea() {
         const importedAgents: Agent[] = [];
 
         for (const gatewayAgent of gatewayAgents) {
-          const importedAgent: Agent = {
-            id: gatewayAgent.id,
+          const importedAgent = await actions.createAgent({
             companyId: nextCompanyId,
             name: gatewayAgent.name,
             description: `Demo-ready OpenClaw operator: ${gatewayAgent.name}`,
             specialty: "general",
-            createdAt: Date.now(),
-          };
-
-          await dbCreateAgent(storageScope, importedAgent);
-          dispatch({ type: "ADD_AGENT", agent: importedAgent });
+          });
           importedAgents.push(importedAgent);
         }
 
@@ -259,20 +250,6 @@ export function ChatArea() {
         specialty,
       });
 
-      if (user) {
-        await fetch("/api/lobsters", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            id: companyId,
-            name: trimmedName,
-            role: specialty,
-            agentId: nextAgent.id,
-            status: "active",
-          }),
-        }).catch(() => null);
-      }
-
       await actions.updateCompany(companyId, { defaultAgentId: nextAgent.id });
       initializeOnboardingState(nextAgent.id);
       await actions.selectChatTarget({ type: "agent", id: nextAgent.id });
@@ -285,7 +262,7 @@ export function ChatArea() {
     } finally {
       setCreatingLobster(false);
     }
-  }, [actions, creatingLobster, dispatch, lobsterName, lobsterRole, state.activeCompanyId, storageScope, t, user]);
+  }, [actions, creatingLobster, lobsterName, lobsterRole, state.activeCompanyId, t]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {

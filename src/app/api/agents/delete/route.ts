@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { readFile, writeFile, rm } from "fs/promises";
-import { existsSync } from "fs";
-import { getOwnedWorkspace, isValidAgentId, resolveAgentPaths } from "@/lib/agent-security";
+import { getOwnedWorkspace, isValidAgentId } from "@/lib/agent-security";
+import { removeAgentWorkspace } from "@/lib/agent-workspace-server";
 import { getServerUser } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
@@ -29,29 +28,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { workspaceDir, configPath } = resolveAgentPaths(agentId);
-
-    // Remove workspace directory
-    if (existsSync(workspaceDir)) {
-      await rm(workspaceDir, { recursive: true, force: true });
-    }
-
-    // Update openclaw.json - remove agent from list
-    if (existsSync(configPath)) {
-      try {
-        const raw = await readFile(configPath, "utf-8");
-        const config = JSON.parse(raw);
-
-        if (config.agents?.list && Array.isArray(config.agents.list)) {
-          config.agents.list = config.agents.list.filter(
-            (a: { id: string }) => a.id !== agentId
-          );
-          await writeFile(configPath, JSON.stringify(config, null, 2), "utf-8");
-        }
-      } catch {
-        // Config parse error, skip update
-      }
-    }
+    await removeAgentWorkspace(agentId);
 
     return NextResponse.json({ ok: true });
   } catch (error) {
