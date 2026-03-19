@@ -18,10 +18,12 @@ export function AuthModal({
   open,
   onOpenChange,
   redirectTo = "/dashboard",
+  onAuthenticated,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   redirectTo?: string;
+  onAuthenticated?: () => void;
 }) {
   const t = useTranslations("auth");
   const { signInWithGoogle, signInWithPassword, signUpWithPassword } = useAuth();
@@ -64,6 +66,7 @@ export function AuthModal({
           return;
         }
       }
+      onAuthenticated?.();
       handleOpenChange(false);
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : t("genericError"));

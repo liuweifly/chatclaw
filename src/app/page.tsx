@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AuthModal } from "@/components/auth-modal";
 import { useAuth } from "@/components/auth-provider";
@@ -10,7 +10,6 @@ function HomeInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
-  const previousUserIdRef = useRef(user?.id ?? null);
   const authRequested = searchParams.get("auth") === "1";
   const nextParam = searchParams.get("next");
   const redirectTo =
@@ -23,18 +22,6 @@ function HomeInner() {
       router.replace(redirectTo);
     }
   }, [authRequested, redirectTo, router, user]);
-
-  useEffect(() => {
-    const previousUserId = previousUserIdRef.current;
-    const nextUserId = user?.id ?? null;
-    previousUserIdRef.current = nextUserId;
-
-    if (!manualAuthModalOpen || !nextUserId || previousUserId === nextUserId) {
-      return;
-    }
-
-    router.replace(redirectTo);
-  }, [manualAuthModalOpen, redirectTo, router, user]);
 
   const clearAuthQuery = useCallback(() => {
     if (!authRequested && !searchParams.get("next")) {
@@ -76,6 +63,7 @@ function HomeInner() {
         open={showAuthModal}
         onOpenChange={handleAuthModalChange}
         redirectTo={redirectTo}
+        onAuthenticated={() => router.replace(redirectTo)}
       />
     </>
   );

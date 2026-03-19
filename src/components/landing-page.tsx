@@ -77,13 +77,15 @@ export function LandingPage({
               {authT("signInCta")}
             </button>
           )}
-          <button
-            type="button"
-            onClick={onEnter}
-            className="rounded-full bg-[#5865f2] px-5 py-2 text-sm font-semibold transition-colors hover:bg-[#4752c4]"
-          >
-            {isAuthenticated ? t("hero.goToWorkspace") : t("hero.tryDemo")}
-          </button>
+          {isAuthenticated && (
+            <button
+              type="button"
+              onClick={onEnter}
+              className="rounded-full bg-[#5865f2] px-5 py-2 text-sm font-semibold transition-colors hover:bg-[#4752c4]"
+            >
+              {t("hero.goToWorkspace")}
+            </button>
+          )}
         </div>
       </nav>
       <AuthModal open={showAuthModal} onOpenChange={setShowAuthModal} />
