@@ -45,8 +45,8 @@ export async function POST(request: Request) {
     body: JSON.stringify({
       product_id: resolveCreemProductId(),
       request_id: `${user.id}:${plan}:${Date.now()}`,
-      success_url: `${origin}/?workspace=1&billing=success&plan=${plan}`,
-      cancel_url: `${origin}/?workspace=1&billing=canceled`,
+      success_url: `${origin}/dashboard?billing=success&plan=${plan}`,
+      cancel_url: `${origin}/dashboard?billing=canceled`,
       customer: {
         email: user.email,
       },

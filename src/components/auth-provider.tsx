@@ -27,7 +27,7 @@ interface AuthContextValue {
   profile: ProfileRecord | null;
   subscription: SubscriptionRecord | null;
   loading: boolean;
-  signInWithGoogle: () => Promise<void>;
+  signInWithGoogle: (redirectTo?: string) => Promise<void>;
   signInWithPassword: (email: string, password: string) => Promise<void>;
   signUpWithPassword: (
     email: string,
@@ -147,12 +147,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [getClient, persistSession, refreshAccount]);
 
-  const signInWithGoogle = useCallback(async () => {
+  const signInWithGoogle = useCallback(async (redirectTo = "/dashboard") => {
     const client = getClient();
     await client.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/?workspace=1`,
+        redirectTo: new URL(redirectTo, window.location.origin).toString(),
       },
     });
   }, [getClient]);

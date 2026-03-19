@@ -1,32 +1,83 @@
 "use client";
 
-import { Suspense, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { AuthModal } from "@/components/auth-modal";
 import { useAuth } from "@/components/auth-provider";
-import { StoreProvider } from "@/lib/store";
-import { CompanySidebar } from "@/components/company-sidebar";
-import { NavigationPanel } from "@/components/navigation-panel";
 import { LandingPage } from "@/components/landing-page";
-import { WorkspaceMain } from "@/components/workspace-main";
 
 function HomeInner() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
-  const [manuallyEntered, setManuallyEntered] = useState(false);
-  const entered = manuallyEntered || searchParams.get("workspace") === "1";
+  const previousUserIdRef = useRef(user?.id ?? null);
+  const authRequested = searchParams.get("auth") === "1";
+  const nextParam = searchParams.get("next");
+  const redirectTo =
+    nextParam && nextParam.startsWith("/") ? nextParam : "/dashboard";
+  const [manualAuthModalOpen, setManualAuthModalOpen] = useState(false);
+  const showAuthModal = authRequested || manualAuthModalOpen;
 
-  if (!entered) {
-    return <LandingPage onEnter={() => setManuallyEntered(true)} isAuthenticated={!!user} />;
-  }
+  useEffect(() => {
+    if (authRequested && user) {
+      router.replace(redirectTo);
+    }
+  }, [authRequested, redirectTo, router, user]);
+
+  useEffect(() => {
+    const previousUserId = previousUserIdRef.current;
+    const nextUserId = user?.id ?? null;
+    previousUserIdRef.current = nextUserId;
+
+    if (!manualAuthModalOpen || !nextUserId || previousUserId === nextUserId) {
+      return;
+    }
+
+    router.replace(redirectTo);
+  }, [manualAuthModalOpen, redirectTo, router, user]);
+
+  const clearAuthQuery = useCallback(() => {
+    if (!authRequested && !searchParams.get("next")) {
+      return;
+    }
+
+    const nextSearchParams = new URLSearchParams(searchParams.toString());
+    nextSearchParams.delete("auth");
+    nextSearchParams.delete("next");
+    const nextQuery = nextSearchParams.toString();
+
+    router.replace(nextQuery ? `/?${nextQuery}` : "/", { scroll: false });
+  }, [authRequested, router, searchParams]);
+
+  const handleAuthModalChange = useCallback(
+    (open: boolean) => {
+      setManualAuthModalOpen(open);
+
+      if (!open) {
+        clearAuthQuery();
+      }
+    },
+    [clearAuthQuery]
+  );
+
+  const handleEnter = useCallback(() => {
+    if (user) {
+      router.push("/dashboard");
+      return;
+    }
+
+    setManualAuthModalOpen(true);
+  }, [router, user]);
 
   return (
-    <StoreProvider>
-      <div className="flex h-screen w-screen overflow-hidden">
-        <CompanySidebar />
-        <NavigationPanel />
-        <WorkspaceMain />
-      </div>
-    </StoreProvider>
+    <>
+      <LandingPage onEnter={handleEnter} isAuthenticated={!!user} />
+      <AuthModal
+        open={showAuthModal}
+        onOpenChange={handleAuthModalChange}
+        redirectTo={redirectTo}
+      />
+    </>
   );
 }
 

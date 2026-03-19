@@ -1,9 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { Bot, Brain, CreditCard, Link2, Package } from "lucide-react";
-import { AuthModal } from "@/components/auth-modal";
 import { ChatArea } from "@/components/chat-area";
 import {
   ChannelsPanel,
@@ -14,7 +13,6 @@ import { LobsterOverview } from "@/components/lobster-overview";
 import { PricingPage } from "@/components/pricing-page";
 import { SettingsPage as WorkspaceSettingsPage } from "@/components/settings-page";
 import { WorkspaceOnboarding } from "@/components/workspace-onboarding";
-import { useAuth } from "@/components/auth-provider";
 import { useTranslations } from "@/i18n/provider";
 import { useStore } from "@/lib/store";
 import {
@@ -59,10 +57,7 @@ function WorkspacePage({
 
 export function WorkspaceMain() {
   const t = useTranslations("workspace");
-  const { user } = useAuth();
   const { state, actions } = useStore();
-  const [showAuthModal, setShowAuthModal] = useState(true);
-  const previousUserIdRef = useRef(user?.id ?? null);
   const primaryAgent = getPrimaryAgent(state);
   const onboardingState = useSyncExternalStore(
     subscribeOnboarding,
@@ -98,24 +93,6 @@ export function WorkspaceMain() {
       dismissOnboarding(primaryAgent.id);
     }
   }, [onboardingState, primaryAgent]);
-
-  useEffect(() => {
-    const previousUserId = previousUserIdRef.current;
-    previousUserIdRef.current = user?.id ?? null;
-
-    if (user) {
-      queueMicrotask(() => {
-        setShowAuthModal(false);
-      });
-      return;
-    }
-
-    if (previousUserId) {
-      queueMicrotask(() => {
-        setShowAuthModal(true);
-      });
-    }
-  }, [user]);
 
   const navigateToView = (view: WorkspaceView) => {
     if (view === "chat" && primaryAgent) {
@@ -175,7 +152,7 @@ export function WorkspaceMain() {
           description={t("views.pricing.description")}
           icon={CreditCard}
         >
-          <PricingPage onRequireAuth={() => setShowAuthModal(true)} />
+          <PricingPage />
         </WorkspacePage>
       );
       break;
@@ -191,7 +168,6 @@ export function WorkspaceMain() {
   return (
     <div className="relative flex min-w-0 flex-1">
       {content}
-      {!user && <AuthModal open={showAuthModal} onOpenChange={setShowAuthModal} />}
       {primaryAgent && onboardingState && !onboardingState.dismissed && (
         <WorkspaceOnboarding
           lobsterName={primaryAgent.name}

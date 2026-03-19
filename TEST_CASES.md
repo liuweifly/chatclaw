@@ -6,7 +6,7 @@
   1. 打开首页，点击 "Create my lobster"
   2. Auth Modal 弹出，点击 "Continue with Google"
   3. 跳转 Google 授权页，完成授权
-  4. 重定向回 /?workspace=1
+  4. 重定向回 /dashboard
   5. 检查：用户已登录，Settings 页显示 Google 账号邮箱和头像
   6. 检查：Supabase profiles 表有对应记录
 - 验证方式：代码层面检查 auth flow，确保 redirectTo 正确、ensureProfile 逻辑正确
@@ -21,11 +21,11 @@
   5. 检查：登录成功，profile 数据正确
 - 自动化测试：写测试调用 Supabase auth API 模拟注册/登录流程
 
-## TC-03: Auth Modal 可关闭
+## TC-03: 首页 Auth Modal 可关闭
 - 步骤：
-  1. 进入 workspace（未登录）
+  1. 打开首页（未登录），点击体验按钮
   2. Auth Modal 弹出
-  3. 点击 Close 按钮 → Modal 关闭，可以浏览工作区
+  3. 点击 Close 按钮 → Modal 关闭，仍停留在首页
   4. 按 Escape → Modal 关闭
   5. 点击 Pricing 的 Upgrade 按钮 → Auth Modal 重新弹出
 - 自动化测试：组件测试验证 onOpenChange 被正确调用

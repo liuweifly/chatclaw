@@ -17,9 +17,11 @@ import { useTranslations } from "@/i18n/provider";
 export function AuthModal({
   open,
   onOpenChange,
+  redirectTo = "/dashboard",
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  redirectTo?: string;
 }) {
   const t = useTranslations("auth");
   const { signInWithGoogle, signInWithPassword, signUpWithPassword } = useAuth();
@@ -74,7 +76,7 @@ export function AuthModal({
     setSubmitting(true);
     setError(null);
     try {
-      await signInWithGoogle();
+      await signInWithGoogle(redirectTo);
     } catch (nextError) {
       setSubmitting(false);
       setError(nextError instanceof Error ? nextError.message : t("genericError"));
