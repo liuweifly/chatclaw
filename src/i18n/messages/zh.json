@@ -178,10 +178,6 @@
       "pricing": "价格",
       "settings": "设置"
     },
-    "demo": {
-      "show": "显示演示智能体",
-      "hide": "隐藏演示智能体"
-    },
     "roles": {
       "general": "通用型",
       "research": "研究型",

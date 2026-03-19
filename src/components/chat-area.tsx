@@ -13,7 +13,7 @@ import { useAuth } from "@/components/auth-provider";
 import { useStore } from "@/lib/store";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { cn } from "@/lib/utils";
-import { createAgent as dbCreateAgent } from "@/lib/db";
+import { createAgent as dbCreateAgent, getStorageScope } from "@/lib/db";
 import {
   getAgentRoleKey,
   initializeOnboardingState,
@@ -49,6 +49,7 @@ export function ChatArea() {
   const locale = useLocale();
   const { user } = useAuth();
   const { state, dispatch, actions } = useStore();
+  const storageScope = getStorageScope(user?.id ?? null);
   const [input, setInput] = useState("");
   const [composing, setComposing] = useState(false);
   const [lobsterName, setLobsterName] = useState("");
@@ -218,7 +219,7 @@ export function ChatArea() {
             createdAt: Date.now(),
           };
 
-          await dbCreateAgent(importedAgent);
+          await dbCreateAgent(storageScope, importedAgent);
           dispatch({ type: "ADD_AGENT", agent: importedAgent });
           importedAgents.push(importedAgent);
         }
@@ -291,7 +292,7 @@ export function ChatArea() {
     } finally {
       setCreatingLobster(false);
     }
-  }, [actions, creatingLobster, dispatch, lobsterName, lobsterRole, state.activeCompanyId, t, user]);
+  }, [actions, creatingLobster, dispatch, lobsterName, lobsterRole, state.activeCompanyId, storageScope, t, user]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {

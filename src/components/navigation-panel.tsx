@@ -57,7 +57,6 @@ export function NavigationPanel() {
   const commonT = useTranslations("common");
   const { user, profile, subscription } = useAuth();
   const { state, actions } = useStore();
-  const [showDemoItems, setShowDemoItems] = useState(false);
   const [teamsOpen, setTeamsOpen] = useState(true);
   const [agentsOpen, setAgentsOpen] = useState(true);
   const [showCreateAgent, setShowCreateAgent] = useState(false);
@@ -145,8 +144,7 @@ export function NavigationPanel() {
           })}
         </div>
 
-        {showDemoItems && (
-          <div className="mt-5 space-y-4">
+        <div className="mt-5 space-y-4">
             <div>
               <div className="flex items-center gap-2 px-1">
                 <button
@@ -305,21 +303,9 @@ export function NavigationPanel() {
               )}
             </div>
           </div>
-        )}
       </div>
 
       <div className="border-t border-white/6 p-3">
-        <button
-          onClick={() => setShowDemoItems((visible) => !visible)}
-          className="flex w-full items-center justify-between rounded-xl border border-white/6 bg-black/10 px-3 py-2 text-xs font-medium text-discord-muted transition-colors hover:bg-white/[0.04] hover:text-sidebar-primary"
-        >
-          <span>{showDemoItems ? t("demo.hide") : t("demo.show")}</span>
-          {showDemoItems ? (
-            <ChevronDown className="h-3.5 w-3.5" />
-          ) : (
-            <ChevronRight className="h-3.5 w-3.5" />
-          )}
-        </button>
         <div className="mt-3 rounded-xl border border-white/6 bg-black/10 p-3">
           <div className="flex items-center gap-3">
             <Avatar>

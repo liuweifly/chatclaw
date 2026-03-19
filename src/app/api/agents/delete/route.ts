@@ -3,8 +3,14 @@ import { readFile, writeFile, rm } from "fs/promises";
 import { homedir } from "os";
 import { join } from "path";
 import { existsSync } from "fs";
+import { getServerUser } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
+  const user = await getServerUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const { agentId } = await request.json();
 

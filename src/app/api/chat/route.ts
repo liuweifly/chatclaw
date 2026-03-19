@@ -1,6 +1,12 @@
 import { NextRequest } from "next/server";
+import { getServerUser } from "@/lib/supabase/server";
 
 export async function POST(req: NextRequest) {
+  const user = await getServerUser();
+  if (!user) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
   const gatewayUrl = req.headers.get("x-gateway-url") || "";
   const gatewayToken = req.headers.get("x-gateway-token") || "";
   const agentId = req.headers.get("x-openclaw-agent-id") || "main";

@@ -4,8 +4,14 @@ import {
   getGatewayConfig,
   getLocalGatewayAgents,
 } from "@/lib/gateway-config";
+import { getServerUser } from "@/lib/supabase/server";
 
 export async function GET() {
+  const user = await getServerUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const gateway = await getGatewayConfig();
   if (!gateway) {
     return NextResponse.json({ found: false });

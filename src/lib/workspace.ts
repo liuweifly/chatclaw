@@ -24,6 +24,26 @@ function onboardingStorageKey(agentId: string) {
   return `chatclaw:onboarding:${agentId}`;
 }
 
+export function clearAllOnboardingState() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const keysToDelete: string[] = [];
+  for (let index = 0; index < window.localStorage.length; index += 1) {
+    const key = window.localStorage.key(index);
+    if (key?.startsWith("chatclaw:onboarding:")) {
+      keysToDelete.push(key);
+    }
+  }
+
+  for (const key of keysToDelete) {
+    window.localStorage.removeItem(key);
+  }
+
+  emitOnboardingChange();
+}
+
 function emitOnboardingChange() {
   for (const listener of onboardingListeners) {
     listener();

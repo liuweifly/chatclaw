@@ -10,6 +10,9 @@ import {
 } from "@/lib/supabase/shared";
 
 type FilterValue = string | number | boolean | null;
+type ServerClientOptions = {
+  useServiceRole?: boolean;
+};
 
 function getServiceRoleKey() {
   const value = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -113,6 +116,26 @@ export async function getServerUser() {
   return session?.user ?? null;
 }
 
+async function getDbAuth(options: ServerClientOptions) {
+  if (options.useServiceRole) {
+    const serviceRoleKey = getServiceRoleKey();
+    return {
+      useServiceKey: true,
+      accessToken: serviceRoleKey,
+    };
+  }
+
+  const session = await getServerSession();
+  if (!session?.access_token) {
+    throw new Error("Missing authenticated Supabase session");
+  }
+
+  return {
+    useServiceKey: false,
+    accessToken: session.access_token,
+  };
+}
+
 async function serviceFetch(
   path: string,
   init: RequestInit = {},
@@ -153,13 +176,7 @@ function buildQuery(filters?: Record<string, FilterValue>, extra?: URLSearchPara
   return query ? `?${query}` : "";
 }
 
-export function createServerClient() {
-  const serviceRoleKey = getServiceRoleKey();
-  const serviceRoleAuth = {
-    useServiceKey: true,
-    accessToken: serviceRoleKey,
-  };
-
+export function createServerClient(clientOptions: ServerClientOptions = {}) {
   return {
     auth: {
       getUser: getServerUser,
@@ -175,7 +192,8 @@ export function createServerClient() {
           limit?: number;
           maybeSingle?: boolean;
         }
-      ) => {
+        ) => {
+        const auth = await getDbAuth(clientOptions);
         const params = new URLSearchParams();
         params.set("select", options?.columns ?? "*");
         if (options?.order) {
@@ -195,7 +213,7 @@ export function createServerClient() {
                 ? { Accept: "application/vnd.pgrst.object+json" }
                 : undefined,
             },
-            serviceRoleAuth
+            auth
           )) as T;
         } catch (error) {
           if (
@@ -213,6 +231,7 @@ export function createServerClient() {
         value: unknown,
         options?: { onConflict?: string; upsert?: boolean }
       ) => {
+        const auth = await getDbAuth(clientOptions);
         const params = new URLSearchParams();
         params.set("select", "*");
         if (options?.onConflict) {
@@ -228,7 +247,7 @@ export function createServerClient() {
             headers: { Prefer: prefer },
             body: JSON.stringify(value),
           },
-          serviceRoleAuth
+          auth
         )) as T[];
       },
       update: async <T>(
@@ -236,6 +255,7 @@ export function createServerClient() {
         value: unknown,
         filters: Record<string, FilterValue>
       ) => {
+        const auth = await getDbAuth(clientOptions);
         const params = new URLSearchParams();
         params.set("select", "*");
         return (await serviceFetch(
@@ -245,28 +265,34 @@ export function createServerClient() {
             headers: { Prefer: "return=representation" },
             body: JSON.stringify(value),
           },
-          serviceRoleAuth
+          auth
         )) as T[];
       },
       delete: async (table: string, filters: Record<string, FilterValue>) => {
+        const auth = await getDbAuth(clientOptions);
         await serviceFetch(
           `/rest/v1/${table}${buildQuery(filters)}`,
           {
             method: "DELETE",
             headers: { Prefer: "return=minimal" },
           },
-          serviceRoleAuth
+          auth
         );
       },
     },
     admin: {
       deleteUser: async (userId: string) => {
+        const auth = await getDbAuth({ useServiceRole: true });
         await serviceFetch(
           `/auth/v1/admin/users/${userId}`,
           { method: "DELETE" },
-          serviceRoleAuth
+          auth
         );
       },
     },
   };
+}
+
+export function createServiceRoleClient() {
+  return createServerClient({ useServiceRole: true });
 }

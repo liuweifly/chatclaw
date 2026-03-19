@@ -178,10 +178,6 @@
       "pricing": "Pricing",
       "settings": "Settings"
     },
-    "demo": {
-      "show": "Show demo agents",
-      "hide": "Hide demo agents"
-    },
     "roles": {
       "general": "general-purpose",
       "research": "research",

@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { normalizePlan } from "@/lib/billing";
-import { createServerClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/server";
 import type { ProfileRecord, SubscriptionRecord } from "@/lib/supabase/shared";
 
 function getWebhookSecret() {
@@ -34,7 +34,7 @@ function eventMetadata(input: unknown) {
 
 async function resolveUserIdFromEmail(email?: string | null) {
   if (!email) return null;
-  const supabase = createServerClient();
+  const supabase = createServiceRoleClient();
   const profile = await supabase.db.select<ProfileRecord | null>("profiles", {
     filters: { email },
     maybeSingle: true,
@@ -46,7 +46,7 @@ async function upsertSubscriptionForUser(
   userId: string,
   payload: Partial<SubscriptionRecord> & { plan?: string; status?: string }
 ) {
-  const supabase = createServerClient();
+  const supabase = createServiceRoleClient();
   const existing = await supabase.db.select<SubscriptionRecord[]>("subscriptions", {
     filters: { user_id: userId },
     order: { column: "updated_at", ascending: false },

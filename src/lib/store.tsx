@@ -11,6 +11,7 @@ import React, {
 import { useAuth } from "@/components/auth-provider";
 import { v4 as uuidv4 } from "uuid";
 import {
+  clearAllStorageScopes,
   getAllCompanies,
   createCompany as dbCreateCompany,
   updateCompany as dbUpdateCompany,
@@ -25,8 +26,11 @@ import {
   deleteTeam as dbDeleteTeam,
   getMessagesByTarget,
   addMessage,
+  getStorageScope,
+  purgeLegacyLocalDatabase,
 } from "@/lib/db";
 import { GatewayClient } from "@/lib/gateway";
+import { clearAllOnboardingState } from "@/lib/workspace";
 import type {
   Company,
   Agent,
@@ -56,6 +60,7 @@ function teamSessionKey(agentId: string, teamId: string): string {
 // ── Action Types ────────────────────────────────────────────────────
 
 type Action =
+  | { type: "RESET_STATE" }
   | { type: "SET_INITIALIZED" }
   | { type: "SET_COMPANIES"; companies: Company[] }
   | { type: "ADD_COMPANY"; company: Company }
@@ -100,6 +105,9 @@ const initialState: AppState = {
 
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
+    case "RESET_STATE":
+      return initialState;
+
     case "SET_INITIALIZED":
       return { ...state, initialized: true };
 
@@ -271,10 +279,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const stateRef = useRef(state);
   const gatewayRef = useRef<GatewayClient | null>(null);
   const pendingStreamResolvers = useRef<Map<string, () => void>>(new Map());
+  const storageScope = getStorageScope(user?.id ?? null);
+  const storageScopeRef = useRef(storageScope);
+  const previousUserIdRef = useRef<string | null | undefined>(undefined);
 
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
+
+  useEffect(() => {
+    storageScopeRef.current = storageScope;
+  }, [storageScope]);
 
   const findLocalLobsterCompany = useCallback(
     (lobster: Pick<LobsterRecord, "id" | "agent_id">, companies: Company[]) => {
@@ -290,7 +305,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   );
 
   const mergeRemoteLobsters = useCallback(async (lobsters: LobsterRecord[]) => {
+    const syncScope = storageScopeRef.current;
+
     for (const lobster of lobsters) {
+      if (syncScope !== storageScopeRef.current) {
+        return;
+      }
+
       const current = stateRef.current;
       const agentId = lobster.agent_id || `lobster-${lobster.id.slice(0, 8)}`;
       const existingCompany = findLocalLobsterCompany(lobster, current.companies);
@@ -327,7 +348,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       };
 
       if (!existingCompany) {
-        await dbCreateCompany(company);
+        await dbCreateCompany(syncScope, company);
         dispatch({ type: "ADD_COMPANY", company });
       } else {
         const companyUpdates: Partial<Company> = {};
@@ -341,13 +362,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           companyUpdates.defaultAgentId = agentId;
         }
         if (Object.keys(companyUpdates).length > 0) {
-          await dbUpdateCompany(existingCompany.id, companyUpdates);
+          await dbUpdateCompany(syncScope, existingCompany.id, companyUpdates);
           dispatch({ type: "UPDATE_COMPANY", id: existingCompany.id, updates: companyUpdates });
         }
       }
 
       if (!existingAgent) {
-        await dbCreateAgent(agent);
+        await dbCreateAgent(syncScope, agent);
         dispatch({ type: "ADD_AGENT", agent });
       } else {
         const agentUpdates: Partial<Agent> = {};
@@ -364,7 +385,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           agentUpdates.specialty = agent.specialty;
         }
         if (Object.keys(agentUpdates).length > 0) {
-          await dbUpdateAgent(existingAgent.id, agentUpdates);
+          await dbUpdateAgent(syncScope, existingAgent.id, agentUpdates);
           dispatch({ type: "UPDATE_AGENT", id: existingAgent.id, updates: agentUpdates });
         }
       }
@@ -398,6 +419,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const syncLocalLobstersToRemote = useCallback(async (remoteLobsters: LobsterRecord[]) => {
+    const syncScope = storageScopeRef.current;
     const current = stateRef.current;
     const remoteIds = new Set(remoteLobsters.map((lobster) => lobster.id));
     const remoteAgentIds = new Set(
@@ -407,6 +429,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     );
 
     for (const company of current.companies) {
+      if (syncScope !== storageScopeRef.current) {
+        return;
+      }
+
       const defaultAgentId = company.defaultAgentId;
       if (!defaultAgentId) {
         continue;
@@ -457,6 +483,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const current = stateRef.current;
     const company = current.companies.find((c) => c.id === current.activeCompanyId);
     if (!company?.gatewayUrl || !company?.gatewayToken) return;
+    const connectionScope = storageScopeRef.current;
 
     if (gatewayRef.current) {
       gatewayRef.current.destroy();
@@ -467,9 +494,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
     client.configure(company.gatewayUrl, company.gatewayToken, {
       onConnectionStatus: (status: ConnectionStatus) => {
+        if (connectionScope !== storageScopeRef.current) {
+          return;
+        }
         dispatch({ type: "SET_CONNECTION_STATUS", status });
       },
       onChatEvent: (payload: ChatEventPayload) => {
+        if (connectionScope !== storageScopeRef.current) {
+          return;
+        }
+
         const agentId = resolveAgentFromSession(payload.sessionKey);
         if (!agentId) return;
 
@@ -499,7 +533,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
                 content: finalText,
                 createdAt: payload.message?.timestamp ?? Date.now(),
               };
-              addMessage(msg).then(() => {
+              addMessage(connectionScope, msg).then(() => {
                 const s = stateRef.current;
                 if (s.activeChatTarget?.type === streaming.targetType && s.activeChatTarget?.id === streaming.targetId) {
                   dispatch({ type: "ADD_MESSAGE", message: msg });
@@ -526,7 +560,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
                 content: `Error: ${errText}`,
                 createdAt: Date.now(),
               };
-              addMessage(msg).then(() => {
+              addMessage(connectionScope, msg).then(() => {
                 const s = stateRef.current;
                 if (s.activeChatTarget?.type === streaming.targetType && s.activeChatTarget?.id === streaming.targetId) {
                   dispatch({ type: "ADD_MESSAGE", message: msg });
@@ -553,7 +587,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
                 content: abortedText,
                 createdAt: Date.now(),
               };
-              addMessage(msg).then(() => {
+              addMessage(connectionScope, msg).then(() => {
                 const s = stateRef.current;
                 if (s.activeChatTarget?.type === streaming.targetType && s.activeChatTarget?.id === streaming.targetId) {
                   dispatch({ type: "ADD_MESSAGE", message: msg });
@@ -584,6 +618,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: "SET_CONNECTION_STATUS", status: "disconnected" });
   }, []);
 
+  const resetLocalState = useCallback(() => {
+    pendingStreamResolvers.current.clear();
+    disconnectGateway();
+    dispatch({ type: "RESET_STATE" });
+  }, [disconnectGateway]);
+
   // ── Actions ───────────────────────────────────────────────────────
 
   const createCompanyAction = useCallback(async (name: string, gatewayUrl: string, gatewayToken: string, description?: string) => {
@@ -597,13 +637,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       createdAt: now,
       updatedAt: now,
     };
-    await dbCreateCompany(company);
+    await dbCreateCompany(storageScopeRef.current, company);
     dispatch({ type: "ADD_COMPANY", company });
     return company;
   }, []);
 
   const updateCompanyAction = useCallback(async (id: string, updates: Partial<Company>) => {
-    await dbUpdateCompany(id, updates);
+    await dbUpdateCompany(storageScopeRef.current, id, updates);
     dispatch({ type: "UPDATE_COMPANY", id, updates });
 
     if (updates.gatewayUrl || updates.gatewayToken) {
@@ -619,7 +659,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     if (current.activeCompanyId === id) {
       disconnectGateway();
     }
-    await dbDeleteCompany(id);
+    await dbDeleteCompany(storageScopeRef.current, id);
     dispatch({ type: "REMOVE_COMPANY", id });
   }, [disconnectGateway]);
 
@@ -631,8 +671,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: "SET_ACTIVE_COMPANY", id });
 
     const [agents, teams] = await Promise.all([
-      getAgentsByCompany(id),
-      getTeamsByCompany(id),
+      getAgentsByCompany(storageScopeRef.current, id),
+      getTeamsByCompany(storageScopeRef.current, id),
     ]);
     dispatch({ type: "SET_AGENTS", agents });
     dispatch({ type: "SET_TEAMS", teams });
@@ -642,7 +682,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         type: "SET_CHAT_TARGET",
         target: { type: "agent", id: company.defaultAgentId },
       });
-      const messages = await getMessagesByTarget("agent", company.defaultAgentId);
+      const messages = await getMessagesByTarget(
+        storageScopeRef.current,
+        "agent",
+        company.defaultAgentId
+      );
       dispatch({ type: "SET_MESSAGES", messages });
     }
 
@@ -678,7 +722,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       createdAt: Date.now(),
     };
 
-    await dbCreateAgent(agent);
+    await dbCreateAgent(storageScopeRef.current, agent);
     dispatch({ type: "ADD_AGENT", agent });
 
     try {
@@ -700,7 +744,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const updateAgentAction = useCallback(async (id: string, updates: Partial<Agent>) => {
-    await dbUpdateAgent(id, updates);
+    await dbUpdateAgent(storageScopeRef.current, id, updates);
     dispatch({ type: "UPDATE_AGENT", id, updates });
   }, []);
 
@@ -708,7 +752,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const current = stateRef.current;
     const deletedAgent = current.agents.find((agent) => agent.id === id);
 
-    await dbDeleteAgent(id);
+    await dbDeleteAgent(storageScopeRef.current, id);
     dispatch({ type: "REMOVE_AGENT", id });
 
     if (deletedAgent) {
@@ -719,7 +763,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         )?.id;
         const updates = { defaultAgentId: fallbackAgentId };
 
-        await dbUpdateCompany(deletedAgent.companyId, updates);
+        await dbUpdateCompany(storageScopeRef.current, deletedAgent.companyId, updates);
         dispatch({ type: "UPDATE_COMPANY", id: deletedAgent.companyId, updates });
       }
     }
@@ -750,18 +794,18 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       agentIds: opts.agentIds,
       createdAt: Date.now(),
     };
-    await dbCreateTeam(team);
+    await dbCreateTeam(storageScopeRef.current, team);
     dispatch({ type: "ADD_TEAM", team });
     return team;
   }, []);
 
   const updateTeamAction = useCallback(async (id: string, updates: Partial<AgentTeam>) => {
-    await dbUpdateTeam(id, updates);
+    await dbUpdateTeam(storageScopeRef.current, id, updates);
     dispatch({ type: "UPDATE_TEAM", id, updates });
   }, []);
 
   const deleteTeamAction = useCallback(async (id: string) => {
-    await dbDeleteTeam(id);
+    await dbDeleteTeam(storageScopeRef.current, id);
     dispatch({ type: "REMOVE_TEAM", id });
     const current = stateRef.current;
     if (current.activeChatTarget?.type === "team" && current.activeChatTarget?.id === id) {
@@ -773,7 +817,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const selectChatTargetAction = useCallback(async (target: ChatTarget) => {
     dispatch({ type: "SET_ACTIVE_VIEW", view: "chat" });
     dispatch({ type: "SET_CHAT_TARGET", target });
-    const msgs = await getMessagesByTarget(target.type, target.id);
+    const msgs = await getMessagesByTarget(storageScopeRef.current, target.type, target.id);
     dispatch({ type: "SET_MESSAGES", messages: msgs });
   }, []);
 
@@ -785,6 +829,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const current = stateRef.current;
     const target = current.activeChatTarget;
     if (!target) return;
+    const messageScope = storageScopeRef.current;
 
     const client = gatewayRef.current;
     if (!client || !client.isConnected()) return;
@@ -797,7 +842,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       content,
       createdAt: Date.now(),
     };
-    await addMessage(userMsg);
+    await addMessage(messageScope, userMsg);
     dispatch({ type: "ADD_MESSAGE", message: userMsg });
 
     if (target.type === "agent") {
@@ -920,30 +965,57 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   // ── Init ────────────────────────────────────────────────────────
 
   useEffect(() => {
-    async function init() {
-      const companies = await getAllCompanies();
+    let cancelled = false;
 
-      if (companies.length === 0) {
+    async function init() {
+      resetLocalState();
+
+      const currentUserId = user?.id ?? null;
+      const previousUserId = previousUserIdRef.current;
+      previousUserIdRef.current = currentUserId;
+
+      await purgeLegacyLocalDatabase();
+
+      if (previousUserId !== undefined && previousUserId !== currentUserId) {
+        await clearAllStorageScopes();
+        clearAllOnboardingState();
+      }
+
+      const companies = await getAllCompanies(storageScopeRef.current);
+      if (cancelled) {
+        return;
+      }
+
+      if (companies.length === 0 && currentUserId) {
         // Bootstrap from OpenClaw config
         try {
           const res = await fetch("/api/bootstrap");
-          const data = await res.json();
-          if (data.found) {
+          if (!res.ok) {
+            throw new Error("Could not bootstrap workspace");
+          }
+
+          const data = (await res.json()) as {
+            found?: boolean;
+            gateway?: { url?: string; token?: string };
+            agents?: Array<{ id: string; name: string }>;
+          };
+
+          if (!cancelled && data.found) {
             const companyId = uuidv4();
             const company: Company = {
               id: companyId,
               name: "AI Operator Demo",
               description: "Hosted OpenClaw demo workspace",
-              gatewayUrl: data.gateway.url,
-              gatewayToken: data.gateway.token,
+              gatewayUrl: data.gateway?.url ?? "",
+              gatewayToken: data.gateway?.token ?? "",
               createdAt: Date.now(),
               updatedAt: Date.now(),
             };
-            await dbCreateCompany(company);
+            await dbCreateCompany(storageScopeRef.current, company);
             dispatch({ type: "ADD_COMPANY", company });
             dispatch({ type: "SET_ACTIVE_COMPANY", id: companyId });
 
-            for (const agentConfig of data.agents) {
+            for (const agentConfig of data.agents ?? []) {
               const agent: Agent = {
                 id: agentConfig.id,
                 companyId,
@@ -952,23 +1024,26 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
                 specialty: "general" as AgentSpecialty,
                 createdAt: Date.now(),
               };
-              await dbCreateAgent(agent);
+              await dbCreateAgent(storageScopeRef.current, agent);
               dispatch({ type: "ADD_AGENT", agent });
             }
           }
         } catch {
           // Bootstrap failed, user can configure manually
         }
-      } else {
+      } else if (companies.length > 0) {
         dispatch({ type: "SET_COMPANIES", companies });
         const firstCompany = companies[0];
         const firstId = firstCompany.id;
         dispatch({ type: "SET_ACTIVE_COMPANY", id: firstId });
 
         const [agents, teams] = await Promise.all([
-          getAgentsByCompany(firstId),
-          getTeamsByCompany(firstId),
+          getAgentsByCompany(storageScopeRef.current, firstId),
+          getTeamsByCompany(storageScopeRef.current, firstId),
         ]);
+        if (cancelled) {
+          return;
+        }
         dispatch({ type: "SET_AGENTS", agents });
         dispatch({ type: "SET_TEAMS", teams });
 
@@ -980,23 +1055,30 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             type: "SET_CHAT_TARGET",
             target: { type: "agent", id: firstCompany.defaultAgentId },
           });
-          const messages = await getMessagesByTarget("agent", firstCompany.defaultAgentId);
+          const messages = await getMessagesByTarget(
+            storageScopeRef.current,
+            "agent",
+            firstCompany.defaultAgentId
+          );
           dispatch({ type: "SET_MESSAGES", messages });
         }
       }
 
-      dispatch({ type: "SET_INITIALIZED" });
+      if (!cancelled) {
+        dispatch({ type: "SET_INITIALIZED" });
+      }
     }
 
-    init();
+    void init();
 
     return () => {
       if (gatewayRef.current) {
         gatewayRef.current.destroy();
         gatewayRef.current = null;
       }
+      cancelled = true;
     };
-  }, []);
+  }, [resetLocalState, user?.id]);
 
   useEffect(() => {
     if (!state.initialized || !user) {
