@@ -9,6 +9,9 @@ import type {
 import { mapLobsterAgentRecordToAgent } from "@/lib/workspace-metadata";
 import type { AgentSpecialty } from "@/types";
 
+const MAX_AGENT_ID_LENGTH = 64;
+const MAX_AUTO_ID_ATTEMPTS = 25;
+
 function normalizeSpecialty(value: unknown): AgentSpecialty {
   switch (value) {
     case "coding":
@@ -23,25 +26,35 @@ function normalizeSpecialty(value: unknown): AgentSpecialty {
 }
 
 function slugifyAgentId(name: string) {
-  return (
+  const slug =
     name
       .toLowerCase()
       .trim()
       .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "") || "agent"
-  );
+      .replace(/^-+|-+$/g, "") || "agent";
+
+  return slug.slice(0, MAX_AGENT_ID_LENGTH).replace(/-+$/g, "") || "agent";
 }
 
-function createUniqueAgentId(base: string, existingIds: Set<string>) {
-  let next = base;
-  let counter = 2;
-
-  while (existingIds.has(next)) {
-    next = `${base}-${counter}`;
-    counter += 1;
+function createAgentIdCandidate(base: string, attempt: number) {
+  if (attempt === 0) {
+    return base;
   }
 
-  return next;
+  const suffix = `-${attempt + 1}`;
+  const maxBaseLength = Math.max(1, MAX_AGENT_ID_LENGTH - suffix.length);
+  const trimmedBase = base.slice(0, maxBaseLength).replace(/-+$/g, "") || "agent";
+
+  return `${trimmedBase}${suffix}`;
+}
+
+function isAgentIdConflict(error: unknown) {
+  return (
+    error instanceof Error &&
+    error.message.includes("Supabase request failed (409)") &&
+    error.message.includes('"code":"23505"') &&
+    error.message.includes("lobster_agents_pkey")
+  );
 }
 
 export async function POST(
@@ -74,39 +87,46 @@ export async function POST(
   const specialty = normalizeSpecialty(body.specialty);
   const description = body.description?.trim() || "";
   const supabase = createServerClient();
-  const existingAgents = await supabase.db.select<Pick<LobsterAgentRecord, "id">[]>(
-    "lobster_agents",
-    {
-      columns: "id",
-      filters: { user_id: user.id },
-    }
-  );
   const requestedAgentId = body.id?.trim();
   if (requestedAgentId && !isValidAgentId(requestedAgentId)) {
     return NextResponse.json({ error: "Invalid agent id" }, { status: 400 });
   }
 
-  if (requestedAgentId && existingAgents.some((agent) => agent.id === requestedAgentId)) {
-    return NextResponse.json({ error: "Agent already exists" }, { status: 409 });
+  const baseAgentId = requestedAgentId || slugifyAgentId(name);
+  const now = new Date().toISOString();
+  let agentId = baseAgentId;
+  let inserted: LobsterAgentRecord[] | null = null;
+
+  for (let attempt = 0; attempt < (requestedAgentId ? 1 : MAX_AUTO_ID_ATTEMPTS); attempt += 1) {
+    agentId = requestedAgentId || createAgentIdCandidate(baseAgentId, attempt);
+
+    try {
+      inserted = await supabase.db.insert<LobsterAgentRecord>("lobster_agents", {
+        id: agentId,
+        user_id: user.id,
+        company_id: companyId,
+        name,
+        avatar_url: null,
+        description,
+        specialty,
+        created_at: now,
+        updated_at: now,
+      });
+      break;
+    } catch (error) {
+      if (!isAgentIdConflict(error)) {
+        throw error;
+      }
+
+      if (requestedAgentId) {
+        return NextResponse.json({ error: "Agent already exists" }, { status: 409 });
+      }
+    }
   }
 
-  const agentId = createUniqueAgentId(
-    requestedAgentId || slugifyAgentId(name),
-    new Set(existingAgents.map((agent) => agent.id))
-  );
-  const now = new Date().toISOString();
-
-  const inserted = await supabase.db.insert<LobsterAgentRecord>("lobster_agents", {
-    id: agentId,
-    user_id: user.id,
-    company_id: companyId,
-    name,
-    avatar_url: null,
-    description,
-    specialty,
-    created_at: now,
-    updated_at: now,
-  });
+  if (!inserted) {
+    throw new Error("Could not generate a unique agent id");
+  }
 
   try {
     await provisionAgentWorkspace({
