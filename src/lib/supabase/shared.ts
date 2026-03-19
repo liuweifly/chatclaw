@@ -4,6 +4,10 @@ import type { Session, User } from "@supabase/supabase-js";
 export const SUPABASE_AUTH_COOKIE_NAME = "chatclaw-sb-auth";
 const THIRTY_DAYS_IN_SECONDS = 60 * 60 * 24 * 30;
 
+function shouldUseSecureCookies() {
+  return process.env.NODE_ENV === "production";
+}
+
 export type SupabaseUser = User;
 export type SupabaseSession = Session;
 
@@ -53,7 +57,7 @@ export function getSupabaseCookieOptions(): CookieOptionsWithName {
     path: "/",
     maxAge: THIRTY_DAYS_IN_SECONDS,
     sameSite: "lax",
-    secure: true,
+    secure: shouldUseSecureCookies(),
     httpOnly: true,
   };
 }
@@ -66,7 +70,7 @@ export function mergeSupabaseCookieOptions(
     ...overrides,
     path: "/",
     sameSite: "lax",
-    secure: true,
+    secure: shouldUseSecureCookies(),
     httpOnly: true,
   };
 }
