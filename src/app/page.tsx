@@ -9,13 +9,13 @@ import { LandingPage } from "@/components/landing-page";
 function HomeInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const authRequested = searchParams.get("auth") === "1";
   const nextParam = searchParams.get("next");
   const redirectTo =
     nextParam && nextParam.startsWith("/") ? nextParam : "/dashboard";
   const [manualAuthModalOpen, setManualAuthModalOpen] = useState(false);
-  const showAuthModal = authRequested || manualAuthModalOpen;
+  const showAuthModal = !loading && !user && (authRequested || manualAuthModalOpen);
 
   useEffect(() => {
     if (authRequested && user) {
@@ -40,12 +40,17 @@ function HomeInner() {
     (open: boolean) => {
       setManualAuthModalOpen(open);
 
-      if (!open) {
+      if (!open && !user) {
         clearAuthQuery();
       }
     },
-    [clearAuthQuery]
+    [clearAuthQuery, user]
   );
+
+  const handleAuthenticated = useCallback(() => {
+    setManualAuthModalOpen(false);
+    router.replace(redirectTo);
+  }, [redirectTo, router]);
 
   const handleEnter = useCallback(() => {
     if (user) {
@@ -63,7 +68,7 @@ function HomeInner() {
         open={showAuthModal}
         onOpenChange={handleAuthModalChange}
         redirectTo={redirectTo}
-        onAuthenticated={() => router.replace(redirectTo)}
+        onAuthenticated={handleAuthenticated}
       />
     </>
   );

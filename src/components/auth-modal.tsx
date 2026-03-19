@@ -66,8 +66,11 @@ export function AuthModal({
           return;
         }
       }
-      onAuthenticated?.();
-      handleOpenChange(false);
+      if (onAuthenticated) {
+        onAuthenticated();
+      } else {
+        handleOpenChange(false);
+      }
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : t("genericError"));
     } finally {
