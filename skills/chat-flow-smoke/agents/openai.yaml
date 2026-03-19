@@ -1,0 +1,4 @@
+interface:
+  display_name: "Chat Flow Smoke"
+  short_description: "Plan ChatClaw streaming and team-chat smoke checks."
+  default_prompt: "Use $chat-flow-smoke to plan the manual smoke test for my recent chat-flow changes."

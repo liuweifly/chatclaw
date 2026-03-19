@@ -1,0 +1,4 @@
+interface:
+  display_name: "Agent Bootstrap"
+  short_description: "Plan ChatClaw agent create/delete/bootstrap checks."
+  default_prompt: "Use $agent-bootstrap to plan validation for my recent agent bootstrap changes."

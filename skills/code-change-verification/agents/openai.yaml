@@ -1,0 +1,4 @@
+interface:
+  display_name: "Code Change Verification"
+  short_description: "Run the standard ChatClaw verification checks."
+  default_prompt: "Use $code-change-verification to validate my recent ChatClaw changes."
