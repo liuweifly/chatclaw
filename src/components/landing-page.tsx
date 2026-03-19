@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   ArrowRight,
   Bot,
@@ -11,6 +12,7 @@ import {
   Wrench,
   Zap,
 } from "lucide-react";
+import { AuthModal } from "@/components/auth-modal";
 import { useAuth } from "@/components/auth-provider";
 import { PricingPage } from "@/components/pricing-page";
 import { useLocale, useTranslations } from "@/i18n/provider";
@@ -25,8 +27,10 @@ export function LandingPage({
   isAuthenticated: boolean;
 }) {
   const t = useTranslations("landing");
+  const authT = useTranslations("auth");
   const locale = useLocale();
   const { updateProfileLocale } = useAuth();
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   return (
     <div className="min-h-screen bg-[#1a1b1e] text-white">
@@ -64,7 +68,17 @@ export function LandingPage({
               );
             })}
           </div>
+          {!isAuthenticated && (
+            <button
+              type="button"
+              onClick={() => setShowAuthModal(true)}
+              className="rounded-full border border-white/10 bg-white/5 px-5 py-2 text-sm font-semibold text-white/80 transition-colors hover:border-white/20 hover:bg-white/10 hover:text-white"
+            >
+              {authT("signInCta")}
+            </button>
+          )}
           <button
+            type="button"
             onClick={onEnter}
             className="rounded-full bg-[#5865f2] px-5 py-2 text-sm font-semibold transition-colors hover:bg-[#4752c4]"
           >
@@ -72,6 +86,7 @@ export function LandingPage({
           </button>
         </div>
       </nav>
+      <AuthModal open={showAuthModal} onOpenChange={setShowAuthModal} />
 
       <section className="relative overflow-hidden px-6 pb-28 pt-20 text-center">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(88,101,242,0.25),transparent_50%)]" />

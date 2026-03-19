@@ -19,6 +19,10 @@ const defaultOnboardingState: LobsterOnboardingState = {
 };
 
 const onboardingListeners = new Set<() => void>();
+const onboardingSnapshotCache = new Map<
+  string,
+  { raw: string | null; state: LobsterOnboardingState | null }
+>();
 
 function onboardingStorageKey(agentId: string) {
   return `chatclaw:onboarding:${agentId}`;
@@ -81,13 +85,19 @@ export function readOnboardingState(agentId: string): LobsterOnboardingState | n
   }
 
   const raw = window.localStorage.getItem(onboardingStorageKey(agentId));
+  const cached = onboardingSnapshotCache.get(agentId);
+  if (cached && cached.raw === raw) {
+    return cached.state;
+  }
+
   if (!raw) {
+    onboardingSnapshotCache.set(agentId, { raw: null, state: null });
     return null;
   }
 
   try {
     const parsed = JSON.parse(raw) as Partial<LobsterOnboardingState>;
-    return {
+    const state = {
       dismissed: Boolean(parsed.dismissed),
       steps: {
         chat: Boolean(parsed.steps?.chat),
@@ -95,7 +105,10 @@ export function readOnboardingState(agentId: string): LobsterOnboardingState | n
         skills: Boolean(parsed.steps?.skills),
       },
     };
+    onboardingSnapshotCache.set(agentId, { raw, state });
+    return state;
   } catch {
+    onboardingSnapshotCache.set(agentId, { raw, state: null });
     return null;
   }
 }
