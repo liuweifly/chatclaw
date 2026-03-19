@@ -28,7 +28,10 @@ interface AuthContextValue {
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
   signInWithPassword: (email: string, password: string) => Promise<void>;
-  signUpWithPassword: (email: string, password: string) => Promise<void>;
+  signUpWithPassword: (
+    email: string,
+    password: string
+  ) => Promise<{ signedIn: boolean }>;
   signOut: () => Promise<void>;
   refreshAccount: () => Promise<void>;
   updateProfileLocale: (locale: string) => Promise<void>;
@@ -109,8 +112,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [client, refreshAccount]);
 
   const signUpWithPassword = useCallback(async (email: string, password: string) => {
-    await client.auth.signUp({ email, password });
-    await refreshAccount();
+    const result = await client.auth.signUp({ email, password });
+
+    if (result.data.session?.user) {
+      await refreshAccount();
+      return { signedIn: true };
+    }
+
+    try {
+      await client.auth.signInWithPassword({ email, password });
+      await refreshAccount();
+      return { signedIn: true };
+    } catch {
+      return { signedIn: false };
+    }
   }, [client, refreshAccount]);
 
   const signOut = useCallback(async () => {

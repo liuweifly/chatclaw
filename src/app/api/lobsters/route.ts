@@ -27,6 +27,7 @@ export async function POST(request: Request) {
   }
 
   const body = (await request.json()) as {
+    id?: string;
     name?: string;
     role?: string | null;
     agentId?: string | null;
@@ -38,11 +39,15 @@ export async function POST(request: Request) {
   }
 
   const inserted = await supabase.db.insert<LobsterRecord>("lobsters", {
+    ...(body.id ? { id: body.id } : {}),
     user_id: user.id,
     name: body.name.trim(),
     role: body.role ?? null,
     agent_id: body.agentId ?? null,
     status: body.status ?? "active",
+  }, {
+    onConflict: "id",
+    upsert: true,
   });
 
   return NextResponse.json({ lobster: inserted[0] ?? null });

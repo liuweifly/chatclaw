@@ -37,6 +37,7 @@
     "passwordPlaceholder": "••••••••",
     "logout": "Log out",
     "missingFields": "Enter both email and password.",
+    "emailConfirmationRequired": "Check your email to confirm your account before signing in.",
     "genericError": "Authentication failed."
   },
   "pricing": {

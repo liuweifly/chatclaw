@@ -270,6 +270,7 @@ export function ChatArea() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            id: companyId,
             name: trimmedName,
             role: specialty,
             agentId: nextAgent.id,

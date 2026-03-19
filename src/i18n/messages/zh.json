@@ -37,6 +37,7 @@
     "passwordPlaceholder": "••••••••",
     "logout": "退出登录",
     "missingFields": "请输入邮箱和密码。",
+    "emailConfirmationRequired": "请先前往邮箱确认账号，然后再登录。",
     "genericError": "认证失败。"
   },
   "pricing": {

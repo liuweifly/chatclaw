@@ -29,6 +29,7 @@ export function SettingsPage({
 
   const avatar = pickUserAvatar(user, profile);
   const name = user || profile ? pickUserName(user, profile) : commonT("operator");
+  const email = user?.email ?? profile?.email ?? "—";
   const plan = subscription?.plan ?? "free";
 
   async function handleDeleteAccount() {
@@ -59,7 +60,7 @@ export function SettingsPage({
             </Avatar>
             <div className="min-w-0">
               <h2 className="truncate text-lg font-semibold text-foreground">{name}</h2>
-              <p className="truncate text-sm text-discord-muted">{user?.email || "—"}</p>
+              <p className="truncate text-sm text-discord-muted">{email}</p>
             </div>
           </div>
         </section>

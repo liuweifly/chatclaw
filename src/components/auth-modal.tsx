@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,15 @@ export function AuthModal({
     [mode, t]
   );
 
+  const handleOpenChange = useCallback((nextOpen: boolean) => {
+    if (!nextOpen) {
+      setSubmitting(false);
+      setError(null);
+    }
+
+    onOpenChange(nextOpen);
+  }, [onOpenChange]);
+
   async function handlePasswordAuth() {
     if (!email.trim() || !password.trim()) {
       setError(t("missingFields"));
@@ -47,9 +56,13 @@ export function AuthModal({
       if (mode === "signin") {
         await signInWithPassword(email.trim(), password);
       } else {
-        await signUpWithPassword(email.trim(), password);
+        const result = await signUpWithPassword(email.trim(), password);
+        if (!result.signedIn) {
+          setError(t("emailConfirmationRequired"));
+          return;
+        }
       }
-      onOpenChange(false);
+      handleOpenChange(false);
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : t("genericError"));
     } finally {
@@ -69,7 +82,7 @@ export function AuthModal({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="border-white/6 bg-discord-mid text-foreground sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-xl">{t("title")}</DialogTitle>

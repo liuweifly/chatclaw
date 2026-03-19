@@ -276,14 +276,26 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     stateRef.current = state;
   }, [state]);
 
-  const mergeRemoteLobsters = useCallback(async (lobsters: LobsterRecord[]) => {
-    const current = stateRef.current;
+  const findLocalLobsterCompany = useCallback(
+    (lobster: Pick<LobsterRecord, "id" | "agent_id">, companies: Company[]) => {
+      const agentId = lobster.agent_id;
+      return companies.find((entry) => {
+        if (entry.id === lobster.id) {
+          return true;
+        }
+        return Boolean(agentId && entry.defaultAgentId === agentId);
+      });
+    },
+    []
+  );
 
+  const mergeRemoteLobsters = useCallback(async (lobsters: LobsterRecord[]) => {
     for (const lobster of lobsters) {
-      const companyId = lobster.id;
+      const current = stateRef.current;
       const agentId = lobster.agent_id || `lobster-${lobster.id.slice(0, 8)}`;
-      const companyExists = current.companies.some((entry) => entry.id === companyId);
-      const agentExists = current.agents.some((entry) => entry.id === agentId);
+      const existingCompany = findLocalLobsterCompany(lobster, current.companies);
+      const companyId = existingCompany?.id ?? lobster.id;
+      const existingAgent = current.agents.find((entry) => entry.id === agentId);
 
       const company: Company = {
         id: companyId,
@@ -314,14 +326,47 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         createdAt: Date.parse(lobster.created_at) || Date.now(),
       };
 
-      if (!companyExists) {
+      if (!existingCompany) {
         await dbCreateCompany(company);
         dispatch({ type: "ADD_COMPANY", company });
+      } else {
+        const companyUpdates: Partial<Company> = {};
+        if (existingCompany.name !== company.name) {
+          companyUpdates.name = company.name;
+        }
+        if (existingCompany.description !== company.description) {
+          companyUpdates.description = company.description;
+        }
+        if (existingCompany.defaultAgentId !== agentId) {
+          companyUpdates.defaultAgentId = agentId;
+        }
+        if (Object.keys(companyUpdates).length > 0) {
+          await dbUpdateCompany(existingCompany.id, companyUpdates);
+          dispatch({ type: "UPDATE_COMPANY", id: existingCompany.id, updates: companyUpdates });
+        }
       }
 
-      if (!agentExists) {
+      if (!existingAgent) {
         await dbCreateAgent(agent);
         dispatch({ type: "ADD_AGENT", agent });
+      } else {
+        const agentUpdates: Partial<Agent> = {};
+        if (existingAgent.companyId !== companyId) {
+          agentUpdates.companyId = companyId;
+        }
+        if (existingAgent.name !== agent.name) {
+          agentUpdates.name = agent.name;
+        }
+        if (existingAgent.description !== agent.description) {
+          agentUpdates.description = agent.description;
+        }
+        if (existingAgent.specialty !== agent.specialty) {
+          agentUpdates.specialty = agent.specialty;
+        }
+        if (Object.keys(agentUpdates).length > 0) {
+          await dbUpdateAgent(existingAgent.id, agentUpdates);
+          dispatch({ type: "UPDATE_AGENT", id: existingAgent.id, updates: agentUpdates });
+        }
       }
     }
 
@@ -329,11 +374,73 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     if (!latest.activeCompanyId && lobsters[0]) {
       const firstLobster = lobsters[0];
       const firstAgentId = firstLobster.agent_id || `lobster-${firstLobster.id.slice(0, 8)}`;
-      dispatch({ type: "SET_ACTIVE_COMPANY", id: firstLobster.id });
-      dispatch({
-        type: "SET_CHAT_TARGET",
-        target: { type: "agent", id: firstAgentId },
+      const firstCompany =
+        findLocalLobsterCompany(firstLobster, latest.companies) ??
+        latest.companies.find((entry) => entry.id === firstLobster.id);
+
+      if (firstCompany) {
+        dispatch({ type: "SET_ACTIVE_COMPANY", id: firstCompany.id });
+        dispatch({
+          type: "SET_CHAT_TARGET",
+          target: { type: "agent", id: firstAgentId },
+        });
+      }
+    }
+  }, [findLocalLobsterCompany]);
+
+  const fetchRemoteLobsters = useCallback(async () => {
+    const response = await fetch("/api/lobsters", { cache: "no-store" });
+    if (!response.ok) {
+      throw new Error("Could not load lobsters");
+    }
+    const payload = (await response.json()) as { lobsters: LobsterRecord[] };
+    return payload.lobsters;
+  }, []);
+
+  const syncLocalLobstersToRemote = useCallback(async (remoteLobsters: LobsterRecord[]) => {
+    const current = stateRef.current;
+    const remoteIds = new Set(remoteLobsters.map((lobster) => lobster.id));
+    const remoteAgentIds = new Set(
+      remoteLobsters
+        .map((lobster) => lobster.agent_id)
+        .filter((agentId): agentId is string => Boolean(agentId))
+    );
+
+    for (const company of current.companies) {
+      const defaultAgentId = company.defaultAgentId;
+      if (!defaultAgentId) {
+        continue;
+      }
+
+      if (remoteIds.has(company.id) || remoteAgentIds.has(defaultAgentId)) {
+        continue;
+      }
+
+      const agent = current.agents.find(
+        (entry) => entry.id === defaultAgentId && entry.companyId === company.id
+      );
+      if (!agent) {
+        continue;
+      }
+
+      const response = await fetch("/api/lobsters", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: company.id,
+          name: agent.name,
+          role: agent.specialty,
+          agentId: agent.id,
+          status: "active",
+        }),
       });
+
+      if (!response.ok) {
+        throw new Error("Could not sync lobster");
+      }
+
+      remoteIds.add(company.id);
+      remoteAgentIds.add(agent.id);
     }
   }, []);
 
@@ -900,13 +1007,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
     async function syncRemoteLobsters() {
       try {
-        const response = await fetch("/api/lobsters", { cache: "no-store" });
-        if (!response.ok) {
-          return;
-        }
-        const payload = (await response.json()) as { lobsters: LobsterRecord[] };
+        const remoteLobsters = await fetchRemoteLobsters();
+        await syncLocalLobstersToRemote(remoteLobsters);
+        const payload = await fetchRemoteLobsters();
         if (!cancelled) {
-          await mergeRemoteLobsters(payload.lobsters);
+          await mergeRemoteLobsters(payload);
         }
       } catch {
         // Non-critical sync
@@ -918,7 +1023,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [mergeRemoteLobsters, state.initialized, user]);
+  }, [
+    fetchRemoteLobsters,
+    mergeRemoteLobsters,
+    state.agents.length,
+    state.companies.length,
+    state.initialized,
+    syncLocalLobstersToRemote,
+    user,
+  ]);
 
   // Connect gateway when company/config changes
   useEffect(() => {
