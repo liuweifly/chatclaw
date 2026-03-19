@@ -18,7 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { testConnection } from "@/lib/gateway";
+import { getDetectedGatewayStatusMessage, testConnection } from "@/lib/gateway";
 import { useStore } from "@/lib/store";
 import type { Company } from "@/types";
 
@@ -35,7 +35,7 @@ function GatewaySettingsForm({
   const [name, setName] = useState(company.name);
   const [description, setDescription] = useState(company.description || "");
   const [gatewayUrl, setGatewayUrl] = useState("");
-  const [gatewayReady, setGatewayReady] = useState(false);
+  const [gatewayStatus, setGatewayStatus] = useState("Gateway not detected");
   const [testState, setTestState] = useState<"idle" | "testing" | "success" | "error">("idle");
   const [testError, setTestError] = useState("");
 
@@ -71,12 +71,12 @@ function GatewaySettingsForm({
       const data = await res.json();
       if (data.found) {
         setGatewayUrl(data.url);
-        setGatewayReady(Boolean(data.hasToken));
+        setGatewayStatus(getDetectedGatewayStatusMessage(data));
         setTestState("idle");
         setTestError("");
       } else {
         setGatewayUrl("");
-        setGatewayReady(false);
+        setGatewayStatus("Gateway not detected");
       }
     } catch {
       // Failed to detect
@@ -144,9 +144,7 @@ function GatewaySettingsForm({
             <div>
               <label className="text-xs text-discord-muted">Gateway Auth</label>
               <div className="mt-1 rounded-md bg-discord-dark px-3 py-2 text-sm text-discord-muted">
-                {gatewayReady
-                  ? "Credentials are configured on the server."
-                  : "Gateway token is not configured on the server."}
+                {gatewayUrl ? gatewayStatus : "Gateway not detected"}
               </div>
             </div>
 

@@ -14,8 +14,50 @@ export interface GatewayAgentConfig {
   workspace?: string;
 }
 
+export type GatewayAvailabilityIssue =
+  | "chat_completions_disabled"
+  | "auth_failed"
+  | "unreachable"
+  | "unexpected_response";
+
+export interface GatewayAvailability {
+  chatReady: boolean;
+  issue?: GatewayAvailabilityIssue;
+  detail?: string;
+}
+
+type LocalGatewayConfigFile = {
+  gateway?: {
+    port?: number;
+    auth?: {
+      token?: string;
+    };
+    http?: {
+      endpoints?: {
+        chatCompletions?: {
+          enabled?: boolean;
+        };
+      };
+    };
+  };
+  agents?: {
+    list?: unknown[];
+  };
+};
+
+const LOCAL_GATEWAY_CONFIG_PATH = join(homedir(), ".openclaw", "openclaw.json");
+
 function readEnv(name: string): string {
   return process.env[name]?.trim() || "";
+}
+
+async function readLocalGatewayConfig(): Promise<LocalGatewayConfigFile | null> {
+  try {
+    const raw = await readFile(LOCAL_GATEWAY_CONFIG_PATH, "utf-8");
+    return JSON.parse(raw) as LocalGatewayConfigFile;
+  } catch {
+    return null;
+  }
 }
 
 export function getEnvGatewayConfig(): GatewayConfig | null {
@@ -35,38 +77,28 @@ export async function getGatewayConfig(): Promise<GatewayConfig | null> {
     return envConfig;
   }
 
-  try {
-    const configPath = join(homedir(), ".openclaw", "openclaw.json");
-    const raw = await readFile(configPath, "utf-8");
-    const config = JSON.parse(raw);
-
-    const gateway = config?.gateway;
-    if (!gateway?.auth?.token) {
-      return null;
-    }
-
-    const port = gateway.port ?? 18789;
-
-    return {
-      url: `ws://localhost:${port}`,
-      token: gateway.auth.token,
-      source: "local",
-    };
-  } catch {
+  const config = await readLocalGatewayConfig();
+  const gateway = config?.gateway;
+  if (!gateway?.auth?.token) {
     return null;
   }
+
+  const port = gateway.port ?? 18789;
+
+  return {
+    url: `ws://localhost:${port}`,
+    token: gateway.auth.token,
+    source: "local",
+  };
 }
 
 export async function getLocalGatewayAgents(): Promise<GatewayAgentConfig[]> {
-  try {
-    const configPath = join(homedir(), ".openclaw", "openclaw.json");
-    const raw = await readFile(configPath, "utf-8");
-    const config = JSON.parse(raw);
-
-    return normalizeAgentList(config?.agents?.list ?? []);
-  } catch {
+  const config = await readLocalGatewayConfig();
+  if (!config) {
     return [];
   }
+
+  return normalizeAgentList(config.agents?.list ?? []);
 }
 
 export function toGatewayHttpBaseUrl(url: string): string {
@@ -75,6 +107,85 @@ export function toGatewayHttpBaseUrl(url: string): string {
     .replace(/^ws:\/\//, "http://")
     .replace(/^wss:\/\//, "https://")
     .replace(/\/+$/, "");
+}
+
+function formatProbeDetail(value: string): string {
+  return value.trim().replace(/\s+/g, " ").slice(0, 240);
+}
+
+async function probeGatewayChatEndpoint(
+  gatewayUrl: string,
+  gatewayToken: string
+): Promise<GatewayAvailability> {
+  const baseUrl = toGatewayHttpBaseUrl(gatewayUrl);
+
+  try {
+    const response = await fetch(`${baseUrl}/v1/chat/completions`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${gatewayToken}`,
+        "Content-Type": "application/json",
+        "x-openclaw-agent-id": "main",
+        "x-openclaw-session-key": "chatclaw:probe",
+      },
+      // Intentionally incomplete so a healthy endpoint can reject cheaply without
+      // running a real model call.
+      body: JSON.stringify({ stream: false }),
+      cache: "no-store",
+      signal: AbortSignal.timeout(5_000),
+    });
+
+    if (response.ok || response.status === 400 || response.status === 422) {
+      return { chatReady: true };
+    }
+
+    const detail = formatProbeDetail(await response.text());
+    if (response.status === 401 || response.status === 403) {
+      return {
+        chatReady: false,
+        issue: "auth_failed",
+        detail,
+      };
+    }
+
+    if (response.status === 404 || response.status === 405) {
+      return {
+        chatReady: false,
+        issue: "chat_completions_disabled",
+        detail,
+      };
+    }
+
+    return {
+      chatReady: false,
+      issue: "unexpected_response",
+      detail: detail ? `HTTP ${response.status}: ${detail}` : `HTTP ${response.status}`,
+    };
+  } catch (error) {
+    return {
+      chatReady: false,
+      issue: "unreachable",
+      detail: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+export async function getGatewayAvailability(
+  config: GatewayConfig
+): Promise<GatewayAvailability> {
+  if (config.source === "local") {
+    const localConfig = await readLocalGatewayConfig();
+    if (localConfig?.gateway?.http?.endpoints?.chatCompletions?.enabled !== true) {
+      return {
+        chatReady: false,
+        issue: "chat_completions_disabled",
+        detail:
+          "Enable gateway.http.endpoints.chatCompletions.enabled in ~/.openclaw/openclaw.json and restart OpenClaw.",
+      };
+    }
+  }
+
+  return probeGatewayChatEndpoint(config.url, config.token);
 }
 
 export async function fetchRemoteGatewayAgents(

@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { getDetectedGatewayStatusMessage } from "@/lib/gateway";
 import { useStore } from "@/lib/store";
 
 export function CreateCompanyDialog({
@@ -23,7 +24,7 @@ export function CreateCompanyDialog({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [gatewayUrl, setGatewayUrl] = useState("");
-  const [gatewayReady, setGatewayReady] = useState(false);
+  const [gatewayStatus, setGatewayStatus] = useState("No server gateway detected yet.");
 
   // Auto-detect gateway on dialog open
   useEffect(() => {
@@ -33,7 +34,10 @@ export function CreateCompanyDialog({
         .then((data) => {
           if (data.found) {
             setGatewayUrl(data.url);
-            setGatewayReady(Boolean(data.hasToken));
+            setGatewayStatus(getDetectedGatewayStatusMessage(data));
+          } else {
+            setGatewayUrl("");
+            setGatewayStatus("No server gateway detected yet.");
           }
         })
         .catch(() => {});
@@ -47,7 +51,7 @@ export function CreateCompanyDialog({
     setName("");
     setDescription("");
     setGatewayUrl("");
-    setGatewayReady(false);
+    setGatewayStatus("No server gateway detected yet.");
     onOpenChange(false);
   }
 
@@ -92,14 +96,10 @@ export function CreateCompanyDialog({
               {gatewayUrl ? (
                 <>
                   <p className="font-mono text-foreground">{gatewayUrl}</p>
-                  <p className="mt-1">
-                    {gatewayReady
-                      ? "Gateway credentials are managed on the server."
-                      : "Gateway token is not configured on the server."}
-                  </p>
+                  <p className="mt-1">{gatewayStatus}</p>
                 </>
               ) : (
-                <p>No server gateway detected yet.</p>
+                <p>{gatewayStatus}</p>
               )}
             </div>
           </div>

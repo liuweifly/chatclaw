@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
+import type { GatewayAvailabilityIssue } from "@/lib/gateway-config";
 import type {
   ChatEventPayload,
   ConnectionStatus,
@@ -11,6 +12,46 @@ export type GatewayEventHandler = {
   onChatEvent?: (payload: ChatEventPayload) => void;
   onError?: (error: string) => void;
 };
+
+type DetectGatewayPayload = {
+  found?: boolean;
+  hasToken?: boolean;
+  chatReady?: boolean;
+  issue?: GatewayAvailabilityIssue;
+  detail?: string;
+};
+
+export function getDetectedGatewayStatusMessage(
+  payload: DetectGatewayPayload
+): string {
+  if (!payload.found) {
+    return "Gateway not detected";
+  }
+
+  if (!payload.hasToken) {
+    return "Gateway token missing on server";
+  }
+
+  switch (payload.issue) {
+    case "chat_completions_disabled":
+      return payload.detail ||
+        "Gateway chat endpoint is disabled. Enable gateway.http.endpoints.chatCompletions.enabled and restart OpenClaw.";
+    case "auth_failed":
+      return payload.detail
+        ? `Gateway auth failed: ${payload.detail}`
+        : "Gateway auth failed";
+    case "unreachable":
+      return payload.detail
+        ? `Gateway HTTP endpoint unreachable: ${payload.detail}`
+        : "Gateway HTTP endpoint unreachable";
+    case "unexpected_response":
+      return payload.detail
+        ? `Gateway probe failed: ${payload.detail}`
+        : "Gateway probe failed";
+    default:
+      return "Gateway is not ready for chat";
+  }
+}
 
 // ── Gateway Client (HTTP SSE) ──────────────────────────────────────
 
@@ -34,13 +75,17 @@ export class GatewayClient {
         throw new Error(`HTTP ${response.status}`);
       }
 
-      const payload = (await response.json()) as {
-        found?: boolean;
-        hasToken?: boolean;
-      };
+      const payload = (await response.json()) as DetectGatewayPayload;
 
-      this.connected = Boolean(payload.found && payload.hasToken);
+      this.connected = Boolean(
+        payload.found &&
+        payload.hasToken &&
+        payload.chatReady !== false
+      );
       this.handlers.onConnectionStatus?.(this.connected ? "connected" : "disconnected");
+      if (!this.connected) {
+        this.handlers.onError?.(getDetectedGatewayStatusMessage(payload));
+      }
     } catch (error) {
       this.connected = false;
       this.handlers.onConnectionStatus?.("error");
@@ -248,10 +293,7 @@ export async function testConnection(
       return { ok: false, error: `HTTP ${res.status}` };
     }
 
-    const payload = (await res.json()) as {
-      found?: boolean;
-      hasToken?: boolean;
-    };
+    const payload = (await res.json()) as DetectGatewayPayload;
 
     if (!payload.found) {
       return { ok: false, error: "Gateway not detected" };
@@ -259,6 +301,10 @@ export async function testConnection(
 
     if (!payload.hasToken) {
       return { ok: false, error: "Gateway token missing on server" };
+    }
+
+    if (payload.chatReady === false) {
+      return { ok: false, error: getDetectedGatewayStatusMessage(payload) };
     }
 
     return { ok: true };
