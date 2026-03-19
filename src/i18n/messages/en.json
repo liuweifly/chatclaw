@@ -188,11 +188,7 @@
     "sidebar": {
       "defaultLobster": "Your lobster",
       "personalWorkspace": "Personal workspace",
-      "createFirstLobster": "Create your first lobster",
-      "demoTeams": "Demo teams",
-      "demoAgents": "Demo agents",
-      "noDemoTeams": "No demo teams yet.",
-      "noDemoAgents": "No extra demo agents yet."
+      "createFirstLobster": "Create your first lobster"
     },
     "views": {
       "channels": {
@@ -419,8 +415,7 @@
           "namePlaceholder": "Atlas",
           "role": "Role",
           "optional": "Optional",
-          "submit": "Create my lobster",
-          "sidebarHint": "Demo agents stay available from the sidebar toggle when you need them."
+          "submit": "Create my lobster"
         }
       },
       "roles": {

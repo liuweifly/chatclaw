@@ -188,11 +188,7 @@
     "sidebar": {
       "defaultLobster": "你的小龙虾",
       "personalWorkspace": "个人工作区",
-      "createFirstLobster": "创建你的第一个小龙虾",
-      "demoTeams": "演示团队",
-      "demoAgents": "演示智能体",
-      "noDemoTeams": "还没有演示团队。",
-      "noDemoAgents": "还没有额外演示智能体。"
+      "createFirstLobster": "创建你的第一个小龙虾"
     },
     "views": {
       "channels": {
@@ -419,8 +415,7 @@
           "namePlaceholder": "Atlas",
           "role": "角色",
           "optional": "可选",
-          "submit": "创建我的小龙虾",
-          "sidebarHint": "需要时，你仍可从侧边栏切换查看演示智能体。"
+          "submit": "创建我的小龙虾"
         }
       },
       "roles": {

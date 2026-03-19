@@ -416,11 +416,6 @@ export function ChatArea() {
               {creationError && (
                 <p className="mt-3 text-sm text-discord-red">{creationError}</p>
               )}
-              {companyAgents.length > 0 && (
-                <p className="mt-3 text-xs leading-5 text-discord-muted">
-                  {t("empty.form.sidebarHint")}
-                </p>
-              )}
             </div>
           </div>
           <div className="mt-8 grid gap-3 rounded-3xl border border-white/6 bg-black/10 p-4 text-sm text-discord-muted md:grid-cols-3">

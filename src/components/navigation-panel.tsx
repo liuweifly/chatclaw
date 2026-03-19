@@ -1,31 +1,22 @@
 "use client";
 
-import { useState } from "react";
 import {
   Brain,
   CreditCard,
-  ChevronDown,
-  ChevronRight,
   House,
   Link2,
   MessageSquare,
   Package,
-  Plus,
   Settings,
-  Trash2,
-  Users,
 } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
-import { CreateAgentDialog } from "@/components/dialogs/create-agent-dialog";
-import { CreateTeamDialog } from "@/components/dialogs/create-team-dialog";
-import { AgentSettingsDialog } from "@/components/dialogs/agent-settings-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useTranslations } from "@/i18n/provider";
 import { useStore } from "@/lib/store";
 import { pickUserAvatar, pickUserName } from "@/lib/supabase/shared";
 import { cn } from "@/lib/utils";
 import { getPrimaryAgent } from "@/lib/workspace";
-import type { Agent, WorkspaceView } from "@/types";
+import type { WorkspaceView } from "@/types";
 
 function ConnectionDot({ connected }: { connected: boolean }) {
   return (
@@ -57,17 +48,9 @@ export function NavigationPanel() {
   const commonT = useTranslations("common");
   const { user, profile, subscription } = useAuth();
   const { state, actions } = useStore();
-  const [teamsOpen, setTeamsOpen] = useState(true);
-  const [agentsOpen, setAgentsOpen] = useState(true);
-  const [showCreateAgent, setShowCreateAgent] = useState(false);
-  const [showCreateTeam, setShowCreateTeam] = useState(false);
-  const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
 
   const activeCompany = state.companies.find((company) => company.id === state.activeCompanyId);
   const primaryAgent = getPrimaryAgent(state);
-  const companyAgents = state.agents.filter((agent) => agent.companyId === state.activeCompanyId);
-  const demoAgents = companyAgents.filter((agent) => agent.id !== primaryAgent?.id);
-  const companyTeams = state.teams.filter((team) => team.companyId === state.activeCompanyId);
   const isConnected = state.connectionStatus === "connected";
   const userName = user || profile ? pickUserName(user, profile) : commonT("operator");
   const userAvatar = pickUserAvatar(user, profile);
@@ -143,166 +126,6 @@ export function NavigationPanel() {
             );
           })}
         </div>
-
-        <div className="mt-5 space-y-4">
-            <div>
-              <div className="flex items-center gap-2 px-1">
-                <button
-                  onClick={() => setTeamsOpen((open) => !open)}
-                  className="flex min-w-0 flex-1 items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-discord-muted hover:text-sidebar-primary"
-                >
-                  {teamsOpen ? (
-                    <ChevronDown className="h-3 w-3" />
-                  ) : (
-                    <ChevronRight className="h-3 w-3" />
-                  )}
-                  {t("sidebar.demoTeams")}
-                </button>
-                <button
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setShowCreateTeam(true);
-                  }}
-                  className="ml-auto text-discord-muted hover:text-sidebar-primary"
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
-              </div>
-
-              {teamsOpen && (
-                <div className="mt-1 space-y-0.5">
-                  {companyTeams.map((team) => {
-                    const isActive =
-                      state.activeChatTarget?.type === "team" &&
-                      state.activeChatTarget.id === team.id &&
-                      state.activeView === "chat";
-
-                    return (
-                      <div
-                        key={team.id}
-                        className={cn(
-                          "group flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-[15px]",
-                          isActive
-                            ? "bg-accent text-accent-foreground"
-                            : "text-discord-muted hover:bg-accent/50 hover:text-sidebar-primary"
-                        )}
-                      >
-                        <button
-                          onClick={() => void actions.selectChatTarget({ type: "team", id: team.id })}
-                          className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
-                        >
-                          <Users className="h-4 w-4 shrink-0 opacity-60" />
-                          <span className="truncate">{team.name}</span>
-                          <span className="ml-auto text-[11px] text-discord-muted">
-                            {team.agentIds.length}
-                          </span>
-                        </button>
-                        <button
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            void actions.deleteTeam(team.id);
-                          }}
-                          className="text-discord-muted opacity-0 transition-opacity hover:text-discord-red group-hover:opacity-100"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    );
-                  })}
-                  {companyTeams.length === 0 && (
-                    <p className="px-2 py-1 text-[12px] italic text-discord-muted">
-                      {t("sidebar.noDemoTeams")}
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div>
-              <div className="flex items-center gap-2 px-1">
-                <button
-                  onClick={() => setAgentsOpen((open) => !open)}
-                  className="flex min-w-0 flex-1 items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-discord-muted hover:text-sidebar-primary"
-                >
-                  {agentsOpen ? (
-                    <ChevronDown className="h-3 w-3" />
-                  ) : (
-                    <ChevronRight className="h-3 w-3" />
-                  )}
-                  {t("sidebar.demoAgents")}
-                </button>
-                <button
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setShowCreateAgent(true);
-                  }}
-                  className="ml-auto text-discord-muted hover:text-sidebar-primary"
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
-              </div>
-
-              {agentsOpen && (
-                <div className="mt-1 space-y-0.5">
-                  {demoAgents.map((agent) => {
-                    const identity = state.agentIdentities[agent.id];
-                    const isActive =
-                      state.activeChatTarget?.type === "agent" &&
-                      state.activeChatTarget.id === agent.id &&
-                      state.activeView === "chat";
-
-                    return (
-                      <div
-                        key={agent.id}
-                        className={cn(
-                          "group flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[15px]",
-                          isActive
-                            ? "bg-accent text-accent-foreground"
-                            : "text-discord-muted hover:bg-accent/50"
-                        )}
-                      >
-                        <button
-                          onClick={() => void actions.selectChatTarget({ type: "agent", id: agent.id })}
-                          className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                        >
-                          <div className="relative shrink-0">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-discord-blurple text-xs font-semibold text-white">
-                              {identity?.emoji || agent.name.slice(0, 1).toUpperCase()}
-                            </div>
-                            <div className="absolute -bottom-0.5 -right-0.5">
-                              <ConnectionDot connected={isConnected} />
-                            </div>
-                          </div>
-                          <div className="min-w-0 flex-1 text-left">
-                            <div className="truncate text-sm text-sidebar-primary">
-                              {identity?.name || agent.name}
-                            </div>
-                            <div className="truncate text-[11px] text-discord-muted">
-                              {agent.specialty}
-                            </div>
-                          </div>
-                        </button>
-                        <button
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setEditingAgent(agent);
-                          }}
-                          className="text-discord-muted opacity-0 transition-opacity hover:text-sidebar-primary group-hover:opacity-100"
-                        >
-                          <Settings className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    );
-                  })}
-                  {demoAgents.length === 0 && (
-                    <p className="px-2 py-1 text-[12px] italic text-discord-muted">
-                      {t("sidebar.noDemoAgents")}
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
       </div>
 
       <div className="border-t border-white/6 p-3">
@@ -321,20 +144,6 @@ export function NavigationPanel() {
           </div>
         </div>
       </div>
-
-      <CreateAgentDialog open={showCreateAgent} onOpenChange={setShowCreateAgent} />
-      <CreateTeamDialog open={showCreateTeam} onOpenChange={setShowCreateTeam} />
-      {editingAgent && (
-        <AgentSettingsDialog
-          agent={editingAgent}
-          open={!!editingAgent}
-          onOpenChange={(open) => {
-            if (!open) {
-              setEditingAgent(null);
-            }
-          }}
-        />
-      )}
     </div>
   );
 }
