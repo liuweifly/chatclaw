@@ -416,6 +416,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     return payload.lobsters;
   }, []);
 
+  const mergeSyncedLobsters = useCallback((base: LobsterRecord[], additions: LobsterRecord[]) => {
+    const merged = new Map(base.map((lobster) => [lobster.id, lobster]));
+    for (const lobster of additions) {
+      merged.set(lobster.id, lobster);
+    }
+    return [...merged.values()];
+  }, []);
+
   const syncLocalLobstersToRemote = useCallback(async (remoteLobsters: LobsterRecord[]) => {
     const syncScope = storageScopeRef.current;
     const current = stateRef.current;
@@ -425,10 +433,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         .map((lobster) => lobster.agent_id)
         .filter((agentId): agentId is string => Boolean(agentId))
     );
+    const syncedLobsters: LobsterRecord[] = [];
 
     for (const company of current.companies) {
       if (syncScope !== storageScopeRef.current) {
-        return;
+        return syncedLobsters;
       }
 
       const defaultAgentId = company.defaultAgentId;
@@ -463,9 +472,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         throw new Error("Could not sync lobster");
       }
 
+      const payload = (await response.json()) as { lobster?: LobsterRecord | null };
+      if (payload.lobster) {
+        syncedLobsters.push(payload.lobster);
+      }
+
       remoteIds.add(company.id);
       remoteAgentIds.add(agent.id);
     }
+
+    return syncedLobsters;
   }, []);
 
   // ── Resolve agentId from sessionKey ───────────────────────────
@@ -979,50 +995,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      if (companies.length === 0 && currentUserId) {
-        // Bootstrap from OpenClaw config
-        try {
-          const res = await fetch("/api/bootstrap");
-          if (!res.ok) {
-            throw new Error("Could not bootstrap workspace");
-          }
+      const shouldBootstrap = companies.length === 0 && Boolean(currentUserId);
 
-          const data = (await res.json()) as {
-            found?: boolean;
-            gateway?: { url?: string; hasToken?: boolean };
-            agents?: Array<{ id: string; name: string }>;
-          };
-
-          if (!cancelled && data.found) {
-            const companyId = uuidv4();
-            const company: Company = {
-              id: companyId,
-              name: "AI Operator Demo",
-              description: "Hosted OpenClaw demo workspace",
-              createdAt: Date.now(),
-              updatedAt: Date.now(),
-            };
-            await dbCreateCompany(storageScopeRef.current, company);
-            dispatch({ type: "ADD_COMPANY", company });
-            dispatch({ type: "SET_ACTIVE_COMPANY", id: companyId });
-
-            for (const agentConfig of data.agents ?? []) {
-              const agent: Agent = {
-                id: agentConfig.id,
-                companyId,
-                name: agentConfig.name,
-                description: `OpenClaw agent: ${agentConfig.name}`,
-                specialty: "general" as AgentSpecialty,
-                createdAt: Date.now(),
-              };
-              await dbCreateAgent(storageScopeRef.current, agent);
-              dispatch({ type: "ADD_AGENT", agent });
-            }
-          }
-        } catch {
-          // Bootstrap failed, user can configure manually
-        }
-      } else if (companies.length > 0) {
+      if (companies.length > 0) {
         dispatch({ type: "SET_COMPANIES", companies });
         const firstCompany = companies[0];
         const firstId = firstCompany.id;
@@ -1058,6 +1033,53 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (!cancelled) {
         dispatch({ type: "SET_INITIALIZED" });
       }
+
+      if (!shouldBootstrap) {
+        return;
+      }
+
+      // Keep gateway bootstrap off the critical path so remote workspace sync can start immediately.
+      try {
+        const res = await fetch("/api/bootstrap");
+        if (!res.ok) {
+          throw new Error("Could not bootstrap workspace");
+        }
+
+        const data = (await res.json()) as {
+          found?: boolean;
+          gateway?: { url?: string; hasToken?: boolean };
+          agents?: Array<{ id: string; name: string }>;
+        };
+
+        if (!cancelled && data.found) {
+          const companyId = uuidv4();
+          const company: Company = {
+            id: companyId,
+            name: "AI Operator Demo",
+            description: "Hosted OpenClaw demo workspace",
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+          };
+          await dbCreateCompany(storageScopeRef.current, company);
+          dispatch({ type: "ADD_COMPANY", company });
+          dispatch({ type: "SET_ACTIVE_COMPANY", id: companyId });
+
+          for (const agentConfig of data.agents ?? []) {
+            const agent: Agent = {
+              id: agentConfig.id,
+              companyId,
+              name: agentConfig.name,
+              description: `OpenClaw agent: ${agentConfig.name}`,
+              specialty: "general" as AgentSpecialty,
+              createdAt: Date.now(),
+            };
+            await dbCreateAgent(storageScopeRef.current, agent);
+            dispatch({ type: "ADD_AGENT", agent });
+          }
+        }
+      } catch {
+        // Bootstrap failed, user can configure manually
+      }
     }
 
     void init();
@@ -1072,7 +1094,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, [resetLocalState, user?.id]);
 
   useEffect(() => {
-    if (!state.initialized || !user) {
+    if (!state.initialized || !user?.id) {
       return;
     }
 
@@ -1081,10 +1103,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     async function syncRemoteLobsters() {
       try {
         const remoteLobsters = await fetchRemoteLobsters();
-        await syncLocalLobstersToRemote(remoteLobsters);
-        const payload = await fetchRemoteLobsters();
+        const syncedLobsters = await syncLocalLobstersToRemote(remoteLobsters);
         if (!cancelled) {
-          await mergeRemoteLobsters(payload);
+          await mergeRemoteLobsters(mergeSyncedLobsters(remoteLobsters, syncedLobsters));
         }
       } catch {
         // Non-critical sync
@@ -1099,21 +1120,18 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, [
     fetchRemoteLobsters,
     mergeRemoteLobsters,
-    state.agents.length,
-    state.companies.length,
     state.initialized,
+    mergeSyncedLobsters,
     syncLocalLobstersToRemote,
-    user,
+    user?.id,
   ]);
 
   // Connect gateway when company/config changes
   useEffect(() => {
-    if (!state.initialized) return;
-    const company = state.companies.find((c) => c.id === state.activeCompanyId);
-    if (company) {
+    if (state.initialized && state.activeCompanyId) {
       connectGateway();
     }
-  }, [connectGateway, state.activeCompanyId, state.companies, state.initialized]);
+  }, [connectGateway, state.activeCompanyId, state.initialized]);
 
   const actions: StoreActions = {
     createCompany: createCompanyAction,
