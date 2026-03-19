@@ -401,6 +401,7 @@
         "available": "Available",
         "install": "Install",
         "installing": "Installing...",
+        "installSuccess": "Skill installed.",
         "noDescription": "No description was found for this skill.",
         "sources": {
           "runtime": "Runtime",

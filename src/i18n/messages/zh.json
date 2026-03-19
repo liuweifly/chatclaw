@@ -401,6 +401,7 @@
         "available": "可用",
         "install": "安装",
         "installing": "安装中...",
+        "installSuccess": "技能已安装。",
         "noDescription": "没有找到这个 skill 的描述。",
         "sources": {
           "runtime": "运行时",

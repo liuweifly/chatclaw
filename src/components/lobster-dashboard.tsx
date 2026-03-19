@@ -159,13 +159,46 @@ function isWorkspaceResponse(payload: unknown): payload is LobsterWorkspaceRespo
   );
 }
 
+function preserveSkillOrder(
+  previous: LobsterWorkspaceResponse["snapshot"] | null,
+  next: LobsterWorkspaceResponse["snapshot"] | null
+) {
+  if (!next || !previous?.skills.length) {
+    return next;
+  }
+
+  const previousOrder = new Map(previous.skills.map((skill, index) => [skill.id, index]));
+  const orderedSkills = [...next.skills].sort((left, right) => {
+    const leftIndex = previousOrder.get(left.id);
+    const rightIndex = previousOrder.get(right.id);
+
+    if (leftIndex === undefined && rightIndex === undefined) {
+      return 0;
+    }
+    if (leftIndex === undefined) {
+      return 1;
+    }
+    if (rightIndex === undefined) {
+      return -1;
+    }
+    return leftIndex - rightIndex;
+  });
+
+  return {
+    ...next,
+    skills: orderedSkills,
+  };
+}
+
 function useWorkspaceSnapshot() {
+  const t = useTranslations("workspace.panels.skills");
   const { state } = useStore();
   const companyId = state.activeCompanyId;
   const primaryAgent = getPrimaryAgent(state);
   const [snapshot, setSnapshot] = useState<LobsterWorkspaceResponse["snapshot"] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [installingSkillId, setInstallingSkillId] = useState<string | null>(null);
 
   const loadSnapshot = useCallback(
@@ -179,6 +212,7 @@ function useWorkspaceSnapshot() {
 
       setLoading(true);
       setError(null);
+      setSuccessMessage(null);
 
       try {
         const response = await fetch(`/api/lobsters/${companyId}/workspace`, {
@@ -192,7 +226,8 @@ function useWorkspaceSnapshot() {
         }
 
         if (!signal?.aborted) {
-          setSnapshot(isWorkspaceResponse(payload) ? payload.snapshot : null);
+          const nextSnapshot = isWorkspaceResponse(payload) ? payload.snapshot : null;
+          setSnapshot((current) => preserveSkillOrder(current, nextSnapshot));
         }
       } catch (caughtError) {
         if (signal?.aborted) {
@@ -225,6 +260,7 @@ function useWorkspaceSnapshot() {
 
       setInstallingSkillId(skillId);
       setError(null);
+      setSuccessMessage(null);
 
       try {
         const response = await fetch(`/api/lobsters/${companyId}/workspace`, {
@@ -241,14 +277,17 @@ function useWorkspaceSnapshot() {
           throw new Error(extractErrorMessage(payload, "Could not install skill"));
         }
 
-        setSnapshot(isWorkspaceResponse(payload) ? payload.snapshot : null);
+        const nextSnapshot = isWorkspaceResponse(payload) ? payload.snapshot : null;
+        setSnapshot((current) => preserveSkillOrder(current, nextSnapshot));
+        setSuccessMessage(t("installSuccess"));
       } catch (caughtError) {
+        setSuccessMessage(null);
         setError(caughtError instanceof Error ? caughtError.message : "Could not install skill");
       } finally {
         setInstallingSkillId(null);
       }
     },
-    [companyId]
+    [companyId, t]
   );
 
   return {
@@ -256,6 +295,7 @@ function useWorkspaceSnapshot() {
     snapshot,
     loading,
     error,
+    successMessage,
     installingSkillId,
     reload: () => loadSnapshot(),
     installSkill,
@@ -500,8 +540,16 @@ export function CapabilitiesPanel() {
 
 export function SkillsPanel() {
   const t = useTranslations("workspace.panels.skills");
-  const { primaryAgent, snapshot, loading, error, installingSkillId, reload, installSkill } =
-    useWorkspaceSnapshot();
+  const {
+    primaryAgent,
+    snapshot,
+    loading,
+    error,
+    successMessage,
+    installingSkillId,
+    reload,
+    installSkill,
+  } = useWorkspaceSnapshot();
 
   if (!primaryAgent) {
     return <PanelState title={t("selectLobster")} />;
@@ -540,6 +588,12 @@ export function SkillsPanel() {
           </button>
         </div>
       </div>
+
+      {successMessage && (
+        <div className="rounded-xl border border-[#23a55a]/20 bg-[#23a55a]/10 p-3 text-xs text-[#23a55a]">
+          {successMessage}
+        </div>
+      )}
 
       {error && snapshot && (
         <div className="rounded-xl border border-[#f0b232]/20 bg-[#f0b232]/10 p-3 text-xs text-[#f0b232]">
