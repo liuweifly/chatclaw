@@ -51,19 +51,8 @@ export function getPrimaryAgent(state: Pick<AppState, "companies" | "agents" | "
   );
 }
 
-export function getAgentRoleLabel(specialty?: AgentSpecialty | null) {
-  switch (specialty) {
-    case "coding":
-      return "builder";
-    case "research":
-      return "research";
-    case "writing":
-      return "writer";
-    case "design":
-      return "design";
-    default:
-      return "general-purpose";
-  }
+export function getAgentRoleKey(specialty?: AgentSpecialty | null) {
+  return specialty ?? "general";
 }
 
 export function readOnboardingState(agentId: string): LobsterOnboardingState | null {

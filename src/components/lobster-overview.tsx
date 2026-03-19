@@ -6,25 +6,34 @@ import {
   Link2,
   Package,
 } from "lucide-react";
-import { useTranslations } from "@/i18n/provider";
+import { useLocale, useTranslations } from "@/i18n/provider";
 import { useStore } from "@/lib/store";
 import { CAPABILITIES } from "@/components/lobster-dashboard";
 import { cn } from "@/lib/utils";
-import { getAgentRoleLabel, getPrimaryAgent } from "@/lib/workspace";
+import { getAgentRoleKey, getPrimaryAgent } from "@/lib/workspace";
 import type { WorkspaceView } from "@/types";
 
 export function LobsterOverview({ onNavigate }: { onNavigate: (view: WorkspaceView) => void }) {
   const t = useTranslations("workspace.overview");
+  const workspaceT = useTranslations("workspace");
+  const locale = useLocale();
   const { state } = useStore();
   const primaryAgent = getPrimaryAgent(state);
   const isConnected = state.connectionStatus === "connected";
   const activeCapabilities = CAPABILITIES.filter((capability) => capability.active);
+  const createdAt = primaryAgent ? new Date(primaryAgent.createdAt) : null;
+  const now = new Date();
+  const isCreatedToday = createdAt
+    ? createdAt.getFullYear() === now.getFullYear() &&
+      createdAt.getMonth() === now.getMonth() &&
+      createdAt.getDate() === now.getDate()
+    : false;
   const createdLabel =
-    primaryAgent && new Date(primaryAgent.createdAt).toDateString() === new Date().toDateString()
+    isCreatedToday
       ? t("createdToday")
-      : primaryAgent
+      : createdAt
       ? t("createdOn", {
-          date: new Date(primaryAgent.createdAt).toLocaleDateString(),
+          date: new Intl.DateTimeFormat(locale).format(createdAt),
         })
       : t("createToBegin");
 
@@ -92,7 +101,9 @@ export function LobsterOverview({ onNavigate }: { onNavigate: (view: WorkspaceVi
                   </span>
                 </div>
                 <p className="mt-1 text-sm text-discord-muted">
-                  {t("roleLabel", { role: getAgentRoleLabel(primaryAgent.specialty) })}
+                  {t("roleLabel", {
+                    role: workspaceT(`roles.${getAgentRoleKey(primaryAgent.specialty)}`),
+                  })}
                 </p>
                 <div className="mt-5 grid gap-3 sm:grid-cols-3">
                   <div className="rounded-xl border border-white/6 bg-black/10 p-3">

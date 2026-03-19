@@ -17,6 +17,7 @@ import type {
   SupabaseSession,
   SupabaseUser,
 } from "@/lib/supabase/shared";
+import { resolveLocale } from "@/i18n/config";
 import { useSetLocale } from "@/i18n/provider";
 
 interface AuthContextValue {
@@ -119,18 +120,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [client]);
 
   const updateProfileLocale = useCallback(async (locale: string) => {
+    const nextLocale = resolveLocale(locale);
+    setLocale(nextLocale);
+
+    if (!user) {
+      return;
+    }
+
     const response = await fetch("/api/account", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ locale }),
+      body: JSON.stringify({ locale: nextLocale }),
     });
     if (response.ok) {
       const payload = (await response.json()) as AccountPayload;
       setProfile(payload.profile);
       setSubscription(payload.subscription);
-      setLocale(locale === "zh" ? "zh" : "en");
     }
-  }, [setLocale]);
+  }, [setLocale, user]);
 
   const deleteAccount = useCallback(async () => {
     const response = await fetch("/api/account", { method: "DELETE" });

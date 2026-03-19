@@ -32,7 +32,9 @@
     "signInCta": "Sign in",
     "signUpCta": "Create account",
     "email": "Email",
+    "emailPlaceholder": "you@example.com",
     "password": "Password",
+    "passwordPlaceholder": "••••••••",
     "logout": "Log out",
     "missingFields": "Enter both email and password.",
     "genericError": "Authentication failed."
@@ -175,6 +177,22 @@
     "demo": {
       "show": "Show demo agents",
       "hide": "Hide demo agents"
+    },
+    "roles": {
+      "general": "general-purpose",
+      "research": "research",
+      "coding": "builder",
+      "writing": "writer",
+      "design": "design"
+    },
+    "sidebar": {
+      "defaultLobster": "Your lobster",
+      "personalWorkspace": "Personal workspace",
+      "createFirstLobster": "Create your first lobster",
+      "demoTeams": "Demo teams",
+      "demoAgents": "Demo agents",
+      "noDemoTeams": "No demo teams yet.",
+      "noDemoAgents": "No extra demo agents yet."
     },
     "views": {
       "channels": {
@@ -367,6 +385,10 @@
       "loading": "Loading workspace...",
       "agentFallback": "Agent",
       "teamFallback": "Team",
+      "teamAgents": {
+        "one": "{count} agent",
+        "other": "{count} agents"
+      },
       "you": "You",
       "thinking": "Thinking...",
       "gatewayUnavailable": "Gateway not connected...",
@@ -399,6 +421,28 @@
           "optional": "Optional",
           "submit": "Create my lobster",
           "sidebarHint": "Demo agents stay available from the sidebar toggle when you need them."
+        }
+      },
+      "roles": {
+        "general": {
+          "label": "General",
+          "description": "Planning, analysis, and everyday operator work."
+        },
+        "research": {
+          "label": "Research",
+          "description": "Synthesis, investigation, and decision support."
+        },
+        "coding": {
+          "label": "Builder",
+          "description": "Prototypes, fixes, and technical execution."
+        },
+        "writing": {
+          "label": "Writer",
+          "description": "Messaging, drafts, and crisp copy."
+        },
+        "design": {
+          "label": "Design",
+          "description": "UX feedback, flows, and interface thinking."
         }
       },
       "examples": {

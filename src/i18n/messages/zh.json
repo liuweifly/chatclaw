@@ -32,7 +32,9 @@
     "signInCta": "登录",
     "signUpCta": "创建账号",
     "email": "邮箱",
+    "emailPlaceholder": "you@example.com",
     "password": "密码",
+    "passwordPlaceholder": "••••••••",
     "logout": "退出登录",
     "missingFields": "请输入邮箱和密码。",
     "genericError": "认证失败。"
@@ -175,6 +177,22 @@
     "demo": {
       "show": "显示演示智能体",
       "hide": "隐藏演示智能体"
+    },
+    "roles": {
+      "general": "通用型",
+      "research": "研究型",
+      "coding": "构建型",
+      "writing": "写作型",
+      "design": "设计型"
+    },
+    "sidebar": {
+      "defaultLobster": "你的小龙虾",
+      "personalWorkspace": "个人工作区",
+      "createFirstLobster": "创建你的第一个小龙虾",
+      "demoTeams": "演示团队",
+      "demoAgents": "演示智能体",
+      "noDemoTeams": "还没有演示团队。",
+      "noDemoAgents": "还没有额外演示智能体。"
     },
     "views": {
       "channels": {
@@ -367,6 +385,10 @@
       "loading": "正在加载工作区...",
       "agentFallback": "智能体",
       "teamFallback": "团队",
+      "teamAgents": {
+        "one": "{count} 个智能体",
+        "other": "{count} 个智能体"
+      },
       "you": "你",
       "thinking": "思考中...",
       "gatewayUnavailable": "网关未连接...",
@@ -399,6 +421,28 @@
           "optional": "可选",
           "submit": "创建我的小龙虾",
           "sidebarHint": "需要时，你仍可从侧边栏切换查看演示智能体。"
+        }
+      },
+      "roles": {
+        "general": {
+          "label": "通用",
+          "description": "适合规划、分析和日常执行型工作。"
+        },
+        "research": {
+          "label": "研究",
+          "description": "适合信息整合、调查和决策支持。"
+        },
+        "coding": {
+          "label": "构建",
+          "description": "适合原型、修复和技术执行。"
+        },
+        "writing": {
+          "label": "写作",
+          "description": "适合消息、草稿和清晰表达。"
+        },
+        "design": {
+          "label": "设计",
+          "description": "适合 UX 反馈、流程和界面思考。"
         }
       },
       "examples": {

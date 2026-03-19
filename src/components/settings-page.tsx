@@ -15,6 +15,7 @@ export function SettingsPage({
   onNavigate: (view: WorkspaceView) => void;
 }) {
   const t = useTranslations("settings");
+  const commonT = useTranslations("common");
   const locale = useLocale();
   const {
     user,
@@ -27,7 +28,7 @@ export function SettingsPage({
   const [deleting, setDeleting] = useState(false);
 
   const avatar = pickUserAvatar(user, profile);
-  const name = pickUserName(user, profile);
+  const name = user || profile ? pickUserName(user, profile) : commonT("operator");
   const plan = subscription?.plan ?? "free";
 
   async function handleDeleteAccount() {
@@ -114,6 +115,7 @@ export function SettingsPage({
           <Button
             type="button"
             onClick={() => void signOut()}
+            disabled={!user}
             variant="secondary"
             className="mt-4 bg-discord-dark text-foreground hover:bg-discord-darker"
           >
@@ -122,20 +124,22 @@ export function SettingsPage({
           </Button>
         </section>
 
-        <section className="rounded-2xl border border-discord-red/30 bg-discord-mid p-6">
-          <h2 className="text-lg font-semibold text-foreground">{t("danger.title")}</h2>
-          <p className="mt-1 text-sm text-discord-muted">{t("danger.description")}</p>
-          <Button
-            type="button"
-            onClick={() => void handleDeleteAccount()}
-            disabled={deleting}
-            variant="destructive"
-            className="mt-4 bg-discord-red text-white hover:bg-discord-red/85"
-          >
-            <Trash2 className="mr-2 h-4 w-4" />
-            {t("danger.delete")}
-          </Button>
-        </section>
+        {user && (
+          <section className="rounded-2xl border border-discord-red/30 bg-discord-mid p-6">
+            <h2 className="text-lg font-semibold text-foreground">{t("danger.title")}</h2>
+            <p className="mt-1 text-sm text-discord-muted">{t("danger.description")}</p>
+            <Button
+              type="button"
+              onClick={() => void handleDeleteAccount()}
+              disabled={deleting}
+              variant="destructive"
+              className="mt-4 bg-discord-red text-white hover:bg-discord-red/85"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              {t("danger.delete")}
+            </Button>
+          </section>
+        )}
       </div>
     </div>
   );

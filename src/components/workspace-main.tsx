@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { Bot, Brain, CreditCard, Link2, Package } from "lucide-react";
 import { AuthModal } from "@/components/auth-modal";
 import { ChatArea } from "@/components/chat-area";
@@ -61,6 +61,8 @@ export function WorkspaceMain() {
   const t = useTranslations("workspace");
   const { user } = useAuth();
   const { state, actions } = useStore();
+  const [showAuthModal, setShowAuthModal] = useState(true);
+  const [hadAuthenticatedUser, setHadAuthenticatedUser] = useState(Boolean(user));
   const primaryAgent = getPrimaryAgent(state);
   const onboardingState = useSyncExternalStore(
     subscribeOnboarding,
@@ -96,6 +98,19 @@ export function WorkspaceMain() {
       dismissOnboarding(primaryAgent.id);
     }
   }, [onboardingState, primaryAgent]);
+
+  useEffect(() => {
+    if (user) {
+      setHadAuthenticatedUser(true);
+      setShowAuthModal(false);
+      return;
+    }
+
+    if (hadAuthenticatedUser) {
+      setShowAuthModal(true);
+      setHadAuthenticatedUser(false);
+    }
+  }, [hadAuthenticatedUser, user]);
 
   const navigateToView = (view: WorkspaceView) => {
     if (view === "chat" && primaryAgent) {
@@ -155,7 +170,7 @@ export function WorkspaceMain() {
           description={t("views.pricing.description")}
           icon={CreditCard}
         >
-          <PricingPage />
+          <PricingPage onRequireAuth={() => setShowAuthModal(true)} />
         </WorkspacePage>
       );
       break;
@@ -171,7 +186,7 @@ export function WorkspaceMain() {
   return (
     <div className="relative flex min-w-0 flex-1">
       {content}
-      {!user && <AuthModal open={true} onOpenChange={() => undefined} />}
+      {!user && <AuthModal open={showAuthModal} onOpenChange={setShowAuthModal} />}
       {primaryAgent && onboardingState && !onboardingState.dismissed && (
         <WorkspaceOnboarding
           lobsterName={primaryAgent.name}

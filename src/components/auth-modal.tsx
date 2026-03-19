@@ -125,7 +125,7 @@ export function AuthModal({
                 type="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                placeholder="you@example.com"
+                placeholder={t("emailPlaceholder")}
                 className="mt-2 border-white/8 bg-discord-dark text-foreground placeholder:text-discord-muted"
               />
             </div>
@@ -137,7 +137,7 @@ export function AuthModal({
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                placeholder="••••••••"
+                placeholder={t("passwordPlaceholder")}
                 className="mt-2 border-white/8 bg-discord-dark text-foreground placeholder:text-discord-muted"
                 onKeyDown={(event) => {
                   if (event.key === "Enter") {

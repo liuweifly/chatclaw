@@ -15,10 +15,10 @@ import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { cn } from "@/lib/utils";
 import { createAgent as dbCreateAgent } from "@/lib/db";
 import {
-  getAgentRoleLabel,
+  getAgentRoleKey,
   initializeOnboardingState,
 } from "@/lib/workspace";
-import { useTranslations } from "@/i18n/provider";
+import { useLocale, useTranslations } from "@/i18n/provider";
 import type { Agent } from "@/types";
 
 function StreamingDots() {
@@ -30,38 +30,6 @@ function StreamingDots() {
     </span>
   );
 }
-
-const onboardingTemplates: Array<{
-  value: Agent["specialty"];
-  label: string;
-  description: string;
-}> = [
-  {
-    value: "general",
-    label: "General",
-    description: "Planning, analysis, and everyday operator work.",
-  },
-  {
-    value: "research",
-    label: "Research",
-    description: "Synthesis, investigation, and decision support.",
-  },
-  {
-    value: "coding",
-    label: "Builder",
-    description: "Prototypes, fixes, and technical execution.",
-  },
-  {
-    value: "writing",
-    label: "Writer",
-    description: "Messaging, drafts, and crisp copy.",
-  },
-  {
-    value: "design",
-    label: "Design",
-    description: "UX feedback, flows, and interface thinking.",
-  },
-];
 
 function buildLobsterDescription(name: string, specialty: Agent["specialty"]) {
   const descriptions: Record<Agent["specialty"], string> = {
@@ -77,6 +45,8 @@ function buildLobsterDescription(name: string, specialty: Agent["specialty"]) {
 
 export function ChatArea() {
   const t = useTranslations("workspace.chat");
+  const workspaceT = useTranslations("workspace");
+  const locale = useLocale();
   const { user } = useAuth();
   const { state, dispatch, actions } = useStore();
   const [input, setInput] = useState("");
@@ -140,6 +110,37 @@ export function ChatArea() {
           prompt: t("prompts.agent.2.prompt"),
         },
       ];
+  const onboardingTemplates: Array<{
+    value: Agent["specialty"];
+    label: string;
+    description: string;
+  }> = [
+    {
+      value: "general",
+      label: t("roles.general.label"),
+      description: t("roles.general.description"),
+    },
+    {
+      value: "research",
+      label: t("roles.research.label"),
+      description: t("roles.research.description"),
+    },
+    {
+      value: "coding",
+      label: t("roles.coding.label"),
+      description: t("roles.coding.description"),
+    },
+    {
+      value: "writing",
+      label: t("roles.writing.label"),
+      description: t("roles.writing.description"),
+    },
+    {
+      value: "design",
+      label: t("roles.design.label"),
+      description: t("roles.design.description"),
+    },
+  ];
 
   // Auto-scroll
   useEffect(() => {
@@ -444,8 +445,10 @@ export function ChatArea() {
     : (targetTeam?.name || t("teamFallback"));
 
   const chatSubtitle = target.type === "agent"
-    ? getAgentRoleLabel(targetAgent?.specialty)
-    : `${teamAgents.length} agent${teamAgents.length !== 1 ? "s" : ""}`;
+    ? workspaceT(`roles.${getAgentRoleKey(targetAgent?.specialty)}`)
+    : teamAgents.length === 1
+    ? t("teamAgents.one", { count: teamAgents.length })
+    : t("teamAgents.other", { count: teamAgents.length });
 
   const placeholder = !isConnected
     ? t("gatewayUnavailable")
@@ -504,7 +507,7 @@ export function ChatArea() {
               {target.type === "agent"
                 ? t("intro.agentBody", {
                     name: chatTitle,
-                    role: getAgentRoleLabel(targetAgent?.specialty),
+                    role: workspaceT(`roles.${getAgentRoleKey(targetAgent?.specialty)}`),
                   })
                 : targetTeam?.description || t("intro.teamBody")}
             </p>
@@ -536,10 +539,10 @@ export function ChatArea() {
             ? state.agentIdentities[msg.agentId]
             : null;
           const isUser = msg.role === "user";
-          const time = new Date(msg.createdAt).toLocaleTimeString([], {
+          const time = new Intl.DateTimeFormat(locale, {
             hour: "2-digit",
             minute: "2-digit",
-          });
+          }).format(new Date(msg.createdAt));
 
           return (
             <div

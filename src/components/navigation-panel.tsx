@@ -40,21 +40,21 @@ function ConnectionDot({ connected }: { connected: boolean }) {
 
 const NAV_ITEMS: Array<{
   id: WorkspaceView;
-  label: string;
   emoji: string;
   icon: typeof House;
 }> = [
-  { id: "overview", label: "Overview", emoji: "🏠", icon: House },
-  { id: "chat", label: "Chat", emoji: "💬", icon: MessageSquare },
-  { id: "channels", label: "Channels", emoji: "🔗", icon: Link2 },
-  { id: "skills", label: "Skills", emoji: "📦", icon: Package },
-  { id: "memory", label: "Memory", emoji: "🧠", icon: Brain },
-  { id: "pricing", label: "Pricing", emoji: "💳", icon: CreditCard },
-  { id: "settings", label: "Settings", emoji: "⚙️", icon: Settings },
+  { id: "overview", emoji: "🏠", icon: House },
+  { id: "chat", emoji: "💬", icon: MessageSquare },
+  { id: "channels", emoji: "🔗", icon: Link2 },
+  { id: "skills", emoji: "📦", icon: Package },
+  { id: "memory", emoji: "🧠", icon: Brain },
+  { id: "pricing", emoji: "💳", icon: CreditCard },
+  { id: "settings", emoji: "⚙️", icon: Settings },
 ];
 
 export function NavigationPanel() {
   const t = useTranslations("workspace");
+  const commonT = useTranslations("common");
   const { user, profile, subscription } = useAuth();
   const { state, actions } = useStore();
   const [showDemoItems, setShowDemoItems] = useState(false);
@@ -70,7 +70,7 @@ export function NavigationPanel() {
   const demoAgents = companyAgents.filter((agent) => agent.id !== primaryAgent?.id);
   const companyTeams = state.teams.filter((team) => team.companyId === state.activeCompanyId);
   const isConnected = state.connectionStatus === "connected";
-  const userName = pickUserName(user, profile);
+  const userName = user || profile ? pickUserName(user, profile) : commonT("operator");
   const userAvatar = pickUserAvatar(user, profile);
 
   if (!activeCompany) {
@@ -107,13 +107,13 @@ export function NavigationPanel() {
           </div>
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-semibold text-sidebar-primary">
-              {primaryAgent?.name || "Your lobster"}
+              {primaryAgent?.name || t("sidebar.defaultLobster")}
             </div>
             <div className="mt-0.5 flex items-center gap-2 text-[11px] text-discord-muted">
-              <span>{isConnected ? "Online" : "Offline"}</span>
+              <span>{isConnected ? commonT("online") : commonT("offline")}</span>
               <span className="text-white/15">•</span>
               <span className="truncate">
-                {primaryAgent ? "Personal workspace" : "Create your first lobster"}
+                {primaryAgent ? t("sidebar.personalWorkspace") : t("sidebar.createFirstLobster")}
               </span>
             </div>
           </div>
@@ -158,7 +158,7 @@ export function NavigationPanel() {
                   ) : (
                     <ChevronRight className="h-3 w-3" />
                   )}
-                  Demo Teams
+                  {t("sidebar.demoTeams")}
                 </button>
                 <button
                   onClick={(event) => {
@@ -213,7 +213,7 @@ export function NavigationPanel() {
                   })}
                   {companyTeams.length === 0 && (
                     <p className="px-2 py-1 text-[12px] italic text-discord-muted">
-                      No demo teams yet.
+                      {t("sidebar.noDemoTeams")}
                     </p>
                   )}
                 </div>
@@ -231,7 +231,7 @@ export function NavigationPanel() {
                   ) : (
                     <ChevronRight className="h-3 w-3" />
                   )}
-                  Demo Agents
+                  {t("sidebar.demoAgents")}
                 </button>
                 <button
                   onClick={(event) => {
@@ -298,7 +298,7 @@ export function NavigationPanel() {
                   })}
                   {demoAgents.length === 0 && (
                     <p className="px-2 py-1 text-[12px] italic text-discord-muted">
-                      No extra demo agents yet.
+                      {t("sidebar.noDemoAgents")}
                     </p>
                   )}
                 </div>
@@ -329,7 +329,7 @@ export function NavigationPanel() {
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium text-sidebar-primary">{userName}</p>
               <p className="truncate text-[11px] text-discord-muted">
-                {subscription?.plan ? subscription.plan.toUpperCase() : "FREE"}
+                {commonT(subscription?.plan ?? "free")}
               </p>
             </div>
           </div>
