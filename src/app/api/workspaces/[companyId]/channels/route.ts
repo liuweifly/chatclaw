@@ -18,6 +18,9 @@ export async function GET(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const channels = await listWorkspaceChannels(companyId, request);
+  const channels = await listWorkspaceChannels(companyId, {
+    hasDefaultAgent: Boolean(company.agent_id),
+    request,
+  });
   return NextResponse.json({ channels } satisfies WorkspaceChannelsResponse);
 }

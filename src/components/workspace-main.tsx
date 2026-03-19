@@ -1,8 +1,9 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import { Bot, Brain, CreditCard, Link2, Package } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { ChatArea } from "@/components/chat-area";
 import {
   ChannelsPanel,
@@ -58,6 +59,8 @@ function WorkspacePage({
 export function WorkspaceMain() {
   const t = useTranslations("workspace");
   const { state, actions } = useStore();
+  const searchParams = useSearchParams();
+  const handledChannelRedirect = useRef<string | null>(null);
   const primaryAgent = getPrimaryAgent(state);
   const onboardingState = useSyncExternalStore(
     subscribeOnboarding,
@@ -93,6 +96,21 @@ export function WorkspaceMain() {
       dismissOnboarding(primaryAgent.id);
     }
   }, [onboardingState, primaryAgent]);
+
+  useEffect(() => {
+    const channel = searchParams.get("channel");
+    const status = searchParams.get("status");
+    const signature = channel && status ? `${channel}:${status}` : null;
+
+    if (!signature || handledChannelRedirect.current === signature) {
+      return;
+    }
+
+    if (channel === "telegram" || channel === "feishu") {
+      handledChannelRedirect.current = signature;
+      actions.setActiveView("channels");
+    }
+  }, [actions, searchParams]);
 
   const navigateToView = (view: WorkspaceView) => {
     if (view === "chat" && primaryAgent) {

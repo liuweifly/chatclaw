@@ -106,7 +106,7 @@ export function isPublicHttpsUrl(url: string) {
 }
 
 export function buildTelegramWebhookUrl(baseUrl: string, channelId: string) {
-  return `${baseUrl}/api/integrations/telegram/webhook/${channelId}`;
+  return `${baseUrl}/api/channels/telegram/webhook/${channelId}`;
 }
 
 export function getFeishuInstallUrlTemplate() {
@@ -122,6 +122,7 @@ export function buildChannelSummaryMap(
   records: ChannelRecord[],
   options: {
     feishuConnectUrl?: string | null;
+    hasDefaultAgent: boolean;
     publicWebhookReady: boolean;
   }
 ) {
@@ -150,16 +151,19 @@ export function buildChannelSummaryMap(
     telegram: {
       key: "telegram",
       id: telegramRecord?.id ?? null,
-      status:
-        (telegramRecord?.status as ChannelConnectionStatus | undefined) ||
-        (options.publicWebhookReady ? "not_connected" : "action_required"),
+      status: !options.hasDefaultAgent
+        ? "action_required"
+        : (telegramRecord?.status as ChannelConnectionStatus | undefined) ||
+          (options.publicWebhookReady ? "not_connected" : "action_required"),
       connectedAt: telegramRecord?.connected_at ?? null,
       lastError: telegramRecord?.last_error ?? null,
       accountLabel: telegramConfig.username ? `@${telegramConfig.username}` : null,
-      details: options.publicWebhookReady
-        ? null
-        : "A public HTTPS app URL is required before Telegram can finish webhook setup.",
-      canConnect: true,
+      details: !options.hasDefaultAgent
+        ? "Set a default agent before connecting Telegram."
+        : options.publicWebhookReady
+          ? null
+          : "A public HTTPS app URL is required before Telegram can finish webhook setup.",
+      canConnect: options.hasDefaultAgent,
       canDisconnect: Boolean(telegramRecord),
       connectMode: "telegram_token",
       connectUrl: null,

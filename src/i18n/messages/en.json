@@ -303,34 +303,44 @@
     },
     "panels": {
       "channels": {
+        "subtitle": "Live channel connections",
+        "helper": "Connect messaging channels here, then let ChatClaw handle webhook setup and status tracking.",
         "connect": "Connect",
+        "continue": "Continue",
+        "manage": "Manage",
+        "disconnect": "Disconnect",
+        "reconnect": "Reconnect",
+        "done": "Done",
+        "refresh": "Refresh",
+        "loadFailed": "Could not load channel status",
+        "callbackSuccess": "{channel} is ready to use.",
+        "callbackActionRequired": "{channel} still needs one more step.",
         "statuses": {
           "connected": "Connected",
-          "available": "Available",
+          "not_connected": "Not connected",
+          "action_required": "Needs action",
+          "error": "Error",
           "coming_soon": "Coming soon"
         },
         "modal": {
           "eyebrow": "Channel setup",
           "title": "Connect {channel}",
-          "beforeYouStart": "What this button does",
-          "beforeYouStartBody": "This opens a guided setup instead of a dead link. You can finish the connection from Settings and your gateway config.",
-          "steps": {
-            "0": {
-              "title": "Open workspace settings",
-              "body": "Review the gateway URL and token first. Channel delivery will fail until the workspace gateway is configured."
-            },
-            "1": {
-              "title": "Prepare the {channel} app",
-              "body": "Create the {channel} bot or app in the official platform, then keep its token, app ID, or signing secret ready."
-            },
-            "2": {
-              "title": "Add credentials to the gateway",
-              "body": "Update your OpenClaw gateway with the {channel} credentials, save, and restart the gateway so ChatClaw can deliver messages there."
-            }
-          },
-          "footer": "After the gateway reconnects, this channel can be used as a real message entry point instead of staying in placeholder state.",
-          "close": "Maybe later",
+          "close": "Close",
           "openSettings": "Open settings",
+          "disconnect": "Disconnect",
+          "done": "Done",
+          "connectedTitle": "Channel is live",
+          "connectedAs": "Connected as {account}",
+          "telegram": {
+            "tokenLabel": "Bot token",
+            "tokenPlaceholder": "123456789:AAExampleBotToken",
+            "help": "Paste the Telegram bot token once. ChatClaw will verify it, register the webhook, and keep the connection status in sync."
+          },
+          "feishu": {
+            "installTitle": "Install the Feishu app",
+            "installBody": "Continue to Feishu to finish the tenant install and authorization flow. When Feishu redirects back, this connection will move into a live state.",
+            "installCta": "Install in Feishu"
+          },
           "channels": {
             "telegram": {
               "name": "Telegram",
@@ -339,18 +349,14 @@
             "feishu": {
               "name": "Feishu",
               "description": "Use Feishu when the lobster needs to join internal team conversations."
-            },
-            "discord": {
-              "name": "Discord",
-              "description": "Use Discord when the lobster should operate inside a server or support channel."
             }
           }
         },
         "items": {
           "web": { "name": "Web Chat", "description": "Chat directly in the browser." },
-          "telegram": { "name": "Telegram", "description": "Deploy your lobster as a Telegram bot." },
-          "feishu": { "name": "Feishu", "description": "Connect to Feishu for team messaging." },
-          "discord": { "name": "Discord", "description": "Add your lobster to any Discord server." },
+          "telegram": { "name": "Telegram", "description": "Paste one bot token and let ChatClaw finish the webhook setup for you." },
+          "feishu": { "name": "Feishu", "description": "Launch the hosted install flow and authorize the workspace in Feishu." },
+          "discord": { "name": "Discord", "description": "Discord stays manual in this build." },
           "slack": { "name": "Slack", "description": "Slack integration is coming soon." }
         }
       },

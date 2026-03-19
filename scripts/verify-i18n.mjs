@@ -78,28 +78,39 @@ function compareTrees(left, right, currentPath, issues) {
 }
 
 function validateModal(messages, locale, issues) {
-  const steps = getValue(messages, ["workspace", "panels", "channels", "modal", "steps"]);
-  if (!steps || typeof steps !== "object") {
-    issues.modal.push(`${locale}: workspace.panels.channels.modal.steps is missing or invalid`);
-    return;
+  const requiredKeys = [
+    ["workspace", "panels", "channels", "subtitle"],
+    ["workspace", "panels", "channels", "helper"],
+    ["workspace", "panels", "channels", "loadFailed"],
+    ["workspace", "panels", "channels", "modal", "connectedTitle"],
+    ["workspace", "panels", "channels", "modal", "connectedAs"],
+    ["workspace", "panels", "channels", "modal", "telegram", "tokenLabel"],
+    ["workspace", "panels", "channels", "modal", "telegram", "tokenPlaceholder"],
+    ["workspace", "panels", "channels", "modal", "telegram", "help"],
+    ["workspace", "panels", "channels", "modal", "feishu", "installTitle"],
+    ["workspace", "panels", "channels", "modal", "feishu", "installBody"],
+    ["workspace", "panels", "channels", "modal", "feishu", "installCta"],
+  ];
+
+  for (const targetPath of requiredKeys) {
+    const value = getValue(messages, targetPath);
+    if (typeof value !== "string") {
+      issues.modal.push(`${locale}: ${targetPath.join(".")} is missing or invalid`);
+    }
   }
 
-  for (const step of Object.keys(steps).sort()) {
-    for (const field of ["title", "body"]) {
-      const value = steps[step]?.[field];
-      const placeholders = placeholderSet(value);
-
-      if (typeof value !== "string") {
-        issues.modal.push(`${locale}: steps.${step}.${field} is not a string`);
-        continue;
-      }
-
-      if (placeholders.length > 0 && placeholders.join(",") !== "channel") {
-        issues.modal.push(
-          `${locale}: steps.${step}.${field} has invalid placeholders {${placeholders.join(", ")}}`
-        );
-      }
-    }
+  const connectedAs = getValue(messages, [
+    "workspace",
+    "panels",
+    "channels",
+    "modal",
+    "connectedAs",
+  ]);
+  const placeholders = placeholderSet(connectedAs);
+  if (placeholders.join(",") !== "account") {
+    issues.modal.push(
+      `${locale}: workspace.panels.channels.modal.connectedAs must use {account}`
+    );
   }
 }
 
@@ -107,8 +118,8 @@ function validateDialogSource(issues) {
   const source = fs.readFileSync(dialogPath, "utf8");
   const requiredPatterns = [
     /t\("title",\s*\{\s*channel:\s*channelName\s*\}\)/,
-    /t\(`steps\.\$\{step\}\.title`,\s*\{\s*channel:\s*channelName\s*\}\)/,
-    /t\(`steps\.\$\{step\}\.body`,\s*\{\s*channel:\s*channelName\s*\}\)/,
+    /t\("telegram\.tokenLabel"\)/,
+    /t\("feishu\.installTitle"\)/,
   ];
 
   for (const pattern of requiredPatterns) {

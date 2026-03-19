@@ -5,6 +5,7 @@ import {
   AlertCircle,
   Brain,
   Bot,
+  CheckCircle2,
   FileText,
   Globe,
   ImageIcon,
@@ -16,6 +17,7 @@ import {
   Sparkles,
   Wrench,
 } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { ChannelConnectDialog } from "@/components/channel-connect-dialog";
 import type {
   ChannelKey,
@@ -52,6 +54,7 @@ export const CAPABILITIES = [
 export function ChannelsPanel({ onOpenSettings }: { onOpenSettings: () => void }) {
   const t = useTranslations("workspace.panels.channels");
   const { state } = useStore();
+  const searchParams = useSearchParams();
   const [channels, setChannels] = useState<ChannelSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,14 +78,14 @@ export function ChannelsPanel({ onOpenSettings }: { onOpenSettings: () => void }
         cache: "no-store",
       });
       const payload = (await response.json()) as
-        | { channels?: ChannelSummary[]; error?: string }
+        | { channels: ChannelSummary[]; error?: string }
         | { error?: string };
 
       if (!response.ok) {
         throw new Error(extractErrorMessage(payload, "Could not load channels"));
       }
 
-      setChannels(Array.isArray(payload.channels) ? payload.channels : []);
+      setChannels("channels" in payload && Array.isArray(payload.channels) ? payload.channels : []);
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Could not load channels");
     } finally {
@@ -96,6 +99,9 @@ export function ChannelsPanel({ onOpenSettings }: { onOpenSettings: () => void }
 
   const selectedIntegration =
     channels.find((channel) => channel.key === selectedChannel) ?? null;
+  const callbackChannel = searchParams.get("channel");
+  const callbackStatus = searchParams.get("status");
+  const callbackMessage = searchParams.get("message");
 
   const connectTelegram = useCallback(
     async (token: string) => {
@@ -224,6 +230,38 @@ export function ChannelsPanel({ onOpenSettings }: { onOpenSettings: () => void }
         </div>
       )}
 
+      {callbackChannel && callbackStatus && (
+        <div
+          className={cn(
+            "mb-4 flex items-start gap-3 rounded-xl border p-4",
+            callbackStatus === "connected" &&
+              "border-[#23a55a]/30 bg-[#23a55a]/10",
+            callbackStatus !== "connected" &&
+              "border-[#f0b232]/30 bg-[#f0b232]/10"
+          )}
+        >
+          {callbackStatus === "connected" ? (
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#23a55a]" />
+          ) : (
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#f0b232]" />
+          )}
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-foreground">
+              {callbackStatus === "connected"
+                ? t("callbackSuccess", {
+                    channel: t(`items.${callbackChannel}.name`),
+                  })
+                : t("callbackActionRequired", {
+                    channel: t(`items.${callbackChannel}.name`),
+                  })}
+            </p>
+            {callbackMessage && (
+              <p className="mt-1 text-sm leading-6 text-discord-muted">{callbackMessage}</p>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="space-y-3">
         {channels.map((channel) => (
           <div
@@ -265,7 +303,11 @@ export function ChannelsPanel({ onOpenSettings }: { onOpenSettings: () => void }
             {channel.connectMode !== "none" && (
               <button
                 type="button"
-                onClick={() => setSelectedChannel(channel.key)}
+                onClick={() => {
+                  if (channel.key === "telegram" || channel.key === "feishu") {
+                    setSelectedChannel(channel.key);
+                  }
+                }}
                 disabled={loading}
                 className="shrink-0 rounded-lg bg-discord-blurple px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-discord-blurple/80 disabled:opacity-60"
               >

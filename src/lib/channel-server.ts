@@ -48,7 +48,13 @@ async function selectChannelByType(companyId: string, type: string) {
   });
 }
 
-export async function listWorkspaceChannels(companyId: string, request?: Request) {
+export async function listWorkspaceChannels(
+  companyId: string,
+  options?: {
+    hasDefaultAgent?: boolean;
+    request?: Request;
+  }
+) {
   const supabase = createServerClient();
   const records = await supabase.db.select<ChannelRecord[]>("channels", {
     columns: CHANNEL_COLUMNS,
@@ -58,7 +64,7 @@ export async function listWorkspaceChannels(companyId: string, request?: Request
     order: { column: "created_at", ascending: true },
   });
 
-  const baseUrl = getAppBaseUrl(request);
+  const baseUrl = getAppBaseUrl(options?.request);
   const publicWebhookReady = isPublicHttpsUrl(baseUrl);
   const template = getFeishuInstallUrlTemplate();
   const feishuConnectUrl =
@@ -68,6 +74,7 @@ export async function listWorkspaceChannels(companyId: string, request?: Request
 
   return buildChannelSummaryMap(records, {
     feishuConnectUrl,
+    hasDefaultAgent: options?.hasDefaultAgent !== false,
     publicWebhookReady,
   });
 }
@@ -174,6 +181,21 @@ export async function connectTelegramChannel(opts: {
   });
 
   return inserted[0];
+}
+
+async function updateChannelError(channelId: string, error: string) {
+  const supabase = createServiceRoleClient();
+  await supabase.db.update<ChannelRecord>(
+    "channels",
+    {
+      status: "error",
+      updated_at: new Date().toISOString(),
+      last_error: error,
+    },
+    {
+      id: channelId,
+    }
+  );
 }
 
 export async function startFeishuConnect(opts: {
@@ -355,22 +377,24 @@ export async function markFeishuCallbackResult(opts: {
 
   const currentConfig = readChannelConfig<FeishuChannelConfig>(channel.config);
   const callbackParams = Object.fromEntries(opts.searchParams.entries());
+  const isConnected = Boolean(!error && tenantKey);
   const nextConfig = {
     ...currentConfig,
     tenantKey,
-    installState: error ? "awaiting_install" : "connected",
+    installState: isConnected ? "connected" : "awaiting_install",
     lastCallbackParams: callbackParams,
   };
+  const lastError = error || (!tenantKey ? "Feishu callback did not include a tenant identifier." : null);
 
   const supabase = createServiceRoleClient();
   const updated = await supabase.db.update<ChannelRecord>(
     "channels",
     {
       config: nextConfig,
-      status: error ? "error" : "connected",
+      status: isConnected ? "connected" : "action_required",
       updated_at: new Date().toISOString(),
-      connected_at: error ? null : new Date().toISOString(),
-      last_error: error,
+      connected_at: isConnected ? new Date().toISOString() : null,
+      last_error: lastError,
     },
     {
       id: channel.id,
@@ -404,42 +428,61 @@ export async function handleTelegramInboundMessage(opts: {
     return;
   }
 
-  const company = await getCompanyById(channel.lobster_id);
-  if (!company?.agent_id) {
-    throw new Error("No default agent is configured for this workspace");
-  }
-
-  const threadSuffix =
-    typeof message.threadId === "number" ? `:${message.threadId}` : "";
-  const sessionKey = `agent:${company.agent_id}:channel:telegram:${channel.id}:${message.chatId}${threadSuffix}`;
-  const reply = await runGatewayPrompt({
-    agentId: company.agent_id,
-    sessionKey,
-    message: message.text.trim(),
-  });
-
-  const finalReply = reply.trim() || "I received your message, but I do not have a reply yet.";
-
-  const { sendTelegramMessage } = await import("@/lib/channel-telegram");
-  await sendTelegramMessage({
-    token: config.botToken,
-    chatId: message.chatId,
-    text: finalReply,
-    messageThreadId: message.threadId,
-  });
-
-  const supabase = createServiceRoleClient();
-  await supabase.db.update<ChannelRecord>(
-    "channels",
-    {
-      status: "connected",
-      updated_at: new Date().toISOString(),
-      last_error: null,
-    },
-    {
-      id: channel.id,
+  try {
+    const company = await getCompanyById(channel.lobster_id);
+    if (!company?.agent_id) {
+      throw new Error("This workspace does not have a default agent yet.");
     }
-  );
+
+    const threadSuffix =
+      typeof message.threadId === "number" ? `:${message.threadId}` : "";
+    const sessionKey = `agent:${company.agent_id}:channel:telegram:${channel.id}:${message.chatId}${threadSuffix}`;
+    const reply = await runGatewayPrompt({
+      agentId: company.agent_id,
+      sessionKey,
+      message: message.text.trim(),
+    });
+
+    const finalReply = reply.trim() || "I received your message, but I do not have a reply yet.";
+
+    const { sendTelegramMessage } = await import("@/lib/channel-telegram");
+    await sendTelegramMessage({
+      token: config.botToken,
+      chatId: message.chatId,
+      text: finalReply,
+      messageThreadId: message.threadId,
+    });
+
+    const supabase = createServiceRoleClient();
+    await supabase.db.update<ChannelRecord>(
+      "channels",
+      {
+        status: "connected",
+        updated_at: new Date().toISOString(),
+        last_error: null,
+      },
+      {
+        id: channel.id,
+      }
+    );
+  } catch (error) {
+    const messageText =
+      error instanceof Error ? error.message : "Telegram delivery failed.";
+
+    await updateChannelError(channel.id, messageText);
+
+    try {
+      const { sendTelegramMessage } = await import("@/lib/channel-telegram");
+      await sendTelegramMessage({
+        token: config.botToken,
+        chatId: message.chatId,
+        text: messageText,
+        messageThreadId: message.threadId,
+      });
+    } catch {
+      // If Telegram itself fails here, the channel record already carries the runtime error.
+    }
+  }
 }
 
 function readMessageUpdate(payload: Record<string, unknown>) {

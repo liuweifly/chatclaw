@@ -303,34 +303,44 @@
     },
     "panels": {
       "channels": {
+        "subtitle": "真实渠道连接",
+        "helper": "在这里接入消息渠道，ChatClaw 会负责 webhook 配置和连接状态追踪。",
         "connect": "连接",
+        "continue": "继续",
+        "manage": "管理",
+        "disconnect": "断开连接",
+        "reconnect": "重新连接",
+        "done": "完成",
+        "refresh": "刷新",
+        "loadFailed": "无法加载渠道状态",
+        "callbackSuccess": "{channel} 已可用。",
+        "callbackActionRequired": "{channel} 还差最后一步。",
         "statuses": {
           "connected": "已连接",
-          "available": "可用",
+          "not_connected": "未连接",
+          "action_required": "需要处理",
+          "error": "错误",
           "coming_soon": "即将推出"
         },
         "modal": {
           "eyebrow": "渠道设置",
           "title": "连接 {channel}",
-          "beforeYouStart": "这个按钮会做什么",
-          "beforeYouStartBody": "这里会打开清晰的接入引导，而不是空操作。你可以从设置页和网关配置完成真正接入。",
-          "steps": {
-            "0": {
-              "title": "打开工作区设置",
-              "body": "先确认网关 URL 和 Token。工作区网关未配置好之前，渠道消息无法正常投递。"
-            },
-            "1": {
-              "title": "准备 {channel} 应用",
-              "body": "先在官方平台创建 {channel} 机器人或应用，并准备好 token、app ID 或签名密钥。"
-            },
-            "2": {
-              "title": "把凭据写入网关",
-              "body": "将 {channel} 凭据更新到 OpenClaw 网关中，保存后重启网关，这样 ChatClaw 才能把消息发送到该渠道。"
-            }
-          },
-          "footer": "当网关重新连上后，这个渠道才能从占位状态变成真正可用的消息入口。",
-          "close": "稍后再说",
+          "close": "关闭",
           "openSettings": "打开设置",
+          "disconnect": "断开连接",
+          "done": "完成",
+          "connectedTitle": "渠道已接通",
+          "connectedAs": "当前连接账号：{account}",
+          "telegram": {
+            "tokenLabel": "Bot Token",
+            "tokenPlaceholder": "123456789:AAExampleBotToken",
+            "help": "只需粘贴一次 Telegram Bot Token。ChatClaw 会自动校验、注册 webhook，并同步连接状态。"
+          },
+          "feishu": {
+            "installTitle": "安装飞书应用",
+            "installBody": "继续前往飞书完成租户安装和授权。飞书回跳后，这个连接会自动进入可用状态。",
+            "installCta": "前往飞书安装"
+          },
           "channels": {
             "telegram": {
               "name": "Telegram",
@@ -339,18 +349,14 @@
             "feishu": {
               "name": "飞书",
               "description": "如果你希望小龙虾进入团队内部沟通流，优先接入飞书。"
-            },
-            "discord": {
-              "name": "Discord",
-              "description": "如果你希望小龙虾在服务器或支持频道中工作，优先接入 Discord。"
             }
           }
         },
         "items": {
           "web": { "name": "网页聊天", "description": "直接在浏览器中聊天。" },
-          "telegram": { "name": "Telegram", "description": "将你的小龙虾部署为 Telegram 机器人。" },
-          "feishu": { "name": "飞书", "description": "连接飞书用于团队消息。" },
-          "discord": { "name": "Discord", "description": "把你的小龙虾加入任意 Discord 服务器。" },
+          "telegram": { "name": "Telegram", "description": "只粘贴一次 Bot Token，剩下的 webhook 配置由 ChatClaw 自动完成。" },
+          "feishu": { "name": "飞书", "description": "发起托管安装流程，并在飞书里授权这个工作区。" },
+          "discord": { "name": "Discord", "description": "当前版本中的 Discord 仍是手动接入。" },
           "slack": { "name": "Slack", "description": "Slack 集成即将推出。" }
         }
       },

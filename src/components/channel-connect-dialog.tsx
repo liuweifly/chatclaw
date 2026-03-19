@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { AlertCircle, CheckCircle2, ExternalLink, Plug2, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,12 +42,6 @@ export function ChannelConnectDialog({
 }) {
   const t = useTranslations("workspace.panels.channels.modal");
   const [telegramToken, setTelegramToken] = useState("");
-
-  useEffect(() => {
-    if (!open) {
-      setTelegramToken("");
-    }
-  }, [open, channel]);
 
   if (!channel) {
     return null;
@@ -176,11 +170,20 @@ export function ChannelConnectDialog({
               {channel === "telegram" ? (
                 <Button
                   type="button"
-                  disabled={pending === "connect" || !telegramToken.trim()}
-                  onClick={() => void onConnectTelegram(telegramToken)}
+                  disabled={
+                    pending === "connect" || (!connected && !telegramToken.trim())
+                  }
+                  onClick={() => {
+                    if (connected && !telegramToken.trim()) {
+                      onOpenChange(false);
+                      return;
+                    }
+
+                    void onConnectTelegram(telegramToken);
+                  }}
                   className="bg-discord-blurple text-white hover:bg-discord-blurple/85"
                 >
-                  {connected ? t("reconnect") : t("connect")}
+                  {connected && !telegramToken.trim() ? t("done") : connected ? t("reconnect") : t("connect")}
                 </Button>
               ) : (
                 <Button
