@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createServerClient, getServerUser } from "@/lib/supabase/server";
+import { createServerClient } from "@/lib/supabase/server";
 import type {
   LobsterAgentRecord,
   LobsterRecord,
@@ -12,12 +12,12 @@ import {
 } from "@/lib/workspace-metadata";
 
 export async function GET() {
-  const user = await getServerUser();
+  const supabase = createServerClient();
+  const user = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const supabase = createServerClient();
   const [lobsters, agents, teams] = await Promise.all([
     supabase.db.select<LobsterRecord[]>("lobsters", {
       filters: { user_id: user.id },
@@ -41,7 +41,8 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const user = await getServerUser();
+  const supabase = createServerClient();
+  const user = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -56,7 +57,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing workspace name" }, { status: 400 });
   }
 
-  const supabase = createServerClient();
   const now = new Date().toISOString();
   const inserted = await supabase.db.insert<LobsterRecord>(
     "lobsters",

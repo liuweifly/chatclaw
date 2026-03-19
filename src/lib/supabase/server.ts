@@ -80,25 +80,6 @@ export async function getServerUser() {
   return (await getAuthContext())?.user ?? null;
 }
 
-async function getDbAuth(options: ServerClientOptions) {
-  if (options.useServiceRole) {
-    return {
-      useServiceKey: true,
-      accessToken: getServiceRoleKey(),
-    };
-  }
-
-  const context = await getAuthContext();
-  if (!context?.session.access_token) {
-    throw new Error("Missing authenticated Supabase session");
-  }
-
-  return {
-    useServiceKey: false,
-    accessToken: context.session.access_token,
-  };
-}
-
 async function serviceFetch(
   path: string,
   init: RequestInit = {},
@@ -140,10 +121,33 @@ function buildQuery(filters?: Record<string, FilterValue>, extra?: URLSearchPara
 }
 
 export function createServerClient(clientOptions: ServerClientOptions = {}) {
+  const authContextPromise = getAuthContext();
+
+  const getCachedAuthContext = async () => authContextPromise;
+
+  const getCachedDbAuth = async () => {
+    if (clientOptions.useServiceRole) {
+      return {
+        useServiceKey: true,
+        accessToken: getServiceRoleKey(),
+      };
+    }
+
+    const context = await getCachedAuthContext();
+    if (!context?.session.access_token) {
+      throw new Error("Missing authenticated Supabase session");
+    }
+
+    return {
+      useServiceKey: false,
+      accessToken: context.session.access_token,
+    };
+  };
+
   return {
     auth: {
-      getUser: getServerUser,
-      getSession: getServerSession,
+      getUser: async () => (await getCachedAuthContext())?.user ?? null,
+      getSession: async () => (await getCachedAuthContext())?.session ?? null,
     },
     db: {
       select: async <T>(
@@ -156,7 +160,7 @@ export function createServerClient(clientOptions: ServerClientOptions = {}) {
           maybeSingle?: boolean;
         }
       ) => {
-        const auth = await getDbAuth(clientOptions);
+        const auth = await getCachedDbAuth();
         const params = new URLSearchParams();
         params.set("select", options?.columns ?? "*");
         if (options?.order) {
@@ -194,7 +198,7 @@ export function createServerClient(clientOptions: ServerClientOptions = {}) {
         value: unknown,
         options?: { onConflict?: string; upsert?: boolean }
       ) => {
-        const auth = await getDbAuth(clientOptions);
+        const auth = await getCachedDbAuth();
         const params = new URLSearchParams();
         params.set("select", "*");
         if (options?.onConflict) {
@@ -218,7 +222,7 @@ export function createServerClient(clientOptions: ServerClientOptions = {}) {
         value: unknown,
         filters: Record<string, FilterValue>
       ) => {
-        const auth = await getDbAuth(clientOptions);
+        const auth = await getCachedDbAuth();
         const params = new URLSearchParams();
         params.set("select", "*");
         return (await serviceFetch(
@@ -232,7 +236,7 @@ export function createServerClient(clientOptions: ServerClientOptions = {}) {
         )) as T[];
       },
       delete: async (table: string, filters: Record<string, FilterValue>) => {
-        const auth = await getDbAuth(clientOptions);
+        const auth = await getCachedDbAuth();
         await serviceFetch(
           `/rest/v1/${table}${buildQuery(filters)}`,
           {

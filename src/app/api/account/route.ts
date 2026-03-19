@@ -8,8 +8,9 @@ import type {
   SupabaseUser,
 } from "@/lib/supabase/shared";
 
-async function ensureProfile(user: SupabaseUser) {
-  const supabase = createServerClient();
+type ServerClient = ReturnType<typeof createServerClient>;
+
+async function ensureProfile(supabase: ServerClient, user: SupabaseUser) {
   const existing = await supabase.db.select<ProfileRecord | null>("profiles", {
     filters: { id: user.id },
     maybeSingle: true,
@@ -44,9 +45,8 @@ async function ensureProfile(user: SupabaseUser) {
   return inserted[0] ?? null;
 }
 
-async function loadAccount(user: SupabaseUser) {
-  const supabase = createServerClient();
-  const profile = await ensureProfile(user);
+async function loadAccount(supabase: ServerClient, user: SupabaseUser) {
+  const profile = await ensureProfile(supabase, user);
   const subscription = await supabase.db.select<SubscriptionRecord[]>("subscriptions", {
     filters: { user_id: user.id },
     order: { column: "updated_at", ascending: false },
@@ -67,7 +67,7 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const account = await loadAccount(user);
+  const account = await loadAccount(supabase, user);
   const payload: AccountPayload = {
     user,
     profile: account.profile,
@@ -106,9 +106,9 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ ok: true });
   }
 
-  await ensureProfile(user);
+  await ensureProfile(supabase, user);
   await supabase.db.update("profiles", updates, { id: user.id });
-  const account = await loadAccount(user);
+  const account = await loadAccount(supabase, user);
 
   return NextResponse.json({
     user,

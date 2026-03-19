@@ -1205,27 +1205,49 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       }
 
       try {
-        let snapshot = await fetchWorkspaceMetadata();
+        const snapshot = await fetchWorkspaceMetadata();
         if (cancelled) {
           return;
         }
 
-        const migrated = await migrateLegacyLocalMetadata(currentUserId, snapshot);
-        if (cancelled) {
-          return;
-        }
-
-        if (migrated) {
-          snapshot = await fetchWorkspaceMetadata();
-          if (cancelled) {
-            return;
-          }
-        }
-
-        await hydrateWorkspaceState(snapshot, {
+        const hydratePromise = hydrateWorkspaceState(snapshot, {
           preferredCompanyId: null,
           preferredTarget: null,
         });
+
+        if (cancelled) {
+          return;
+        }
+
+        dispatch({ type: "SET_INITIALIZED" });
+        await hydratePromise;
+
+        if (cancelled) {
+          return;
+        }
+
+        try {
+          const migrated = await migrateLegacyLocalMetadata(currentUserId, snapshot);
+          if (cancelled) {
+            return;
+          }
+
+          if (!migrated) {
+            return;
+          }
+
+          const refreshedSnapshot = await fetchWorkspaceMetadata();
+          if (cancelled) {
+            return;
+          }
+
+          await hydrateWorkspaceState(refreshedSnapshot, {
+            preferredCompanyId: stateRef.current.activeCompanyId,
+            preferredTarget: stateRef.current.activeChatTarget,
+          });
+        } catch {
+          // Keep the hydrated remote workspace visible even if legacy migration fails.
+        }
       } catch {
         if (!cancelled) {
           dispatch({ type: "SET_COMPANIES", companies: [] });
@@ -1237,7 +1259,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      if (!cancelled) {
+      if (!cancelled && !stateRef.current.initialized) {
         dispatch({ type: "SET_INITIALIZED" });
       }
     }
