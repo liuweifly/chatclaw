@@ -11,8 +11,9 @@ import {
   Wrench,
   Zap,
 } from "lucide-react";
+import { useAuth } from "@/components/auth-provider";
 import { PricingPage } from "@/components/pricing-page";
-import { useTranslations } from "@/i18n/provider";
+import { useLocale, useTranslations } from "@/i18n/provider";
 
 const FEATURE_ICONS = [Plug, Brain, Wrench, Clock, Bot, Shield] as const;
 
@@ -24,6 +25,8 @@ export function LandingPage({
   isAuthenticated: boolean;
 }) {
   const t = useTranslations("landing");
+  const locale = useLocale();
+  const { updateProfileLocale } = useAuth();
 
   return (
     <div className="min-h-screen bg-[#1a1b1e] text-white">
@@ -32,12 +35,42 @@ export function LandingPage({
           <span className="text-2xl">🦞</span>
           <span className="font-bold text-lg">ChatClaw</span>
         </div>
-        <button
-          onClick={onEnter}
-          className="rounded-full bg-[#5865f2] px-5 py-2 text-sm font-semibold transition-colors hover:bg-[#4752c4]"
-        >
-          {isAuthenticated ? t("hero.goToWorkspace") : t("hero.tryDemo")}
-        </button>
+        <div className="flex items-center gap-3">
+          <div
+            className="inline-flex items-center rounded-full border border-white/10 bg-white/5 p-1"
+            role="group"
+            aria-label={t("nav.language")}
+          >
+            {[
+              { value: "en", label: "EN" },
+              { value: "zh", label: "中文" },
+            ].map((option) => {
+              const active = locale === option.value;
+
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => void updateProfileLocale(option.value)}
+                  aria-pressed={active}
+                  className={`rounded-full px-3 py-1.5 text-sm font-semibold transition-colors ${
+                    active
+                      ? "bg-[#5865f2] text-white shadow-lg shadow-[#5865f2]/20"
+                      : "text-white/65 hover:text-white"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+          <button
+            onClick={onEnter}
+            className="rounded-full bg-[#5865f2] px-5 py-2 text-sm font-semibold transition-colors hover:bg-[#4752c4]"
+          >
+            {isAuthenticated ? t("hero.goToWorkspace") : t("hero.tryDemo")}
+          </button>
+        </div>
       </nav>
 
       <section className="relative overflow-hidden px-6 pb-28 pt-20 text-center">

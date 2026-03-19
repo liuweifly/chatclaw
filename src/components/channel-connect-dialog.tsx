@@ -32,6 +32,7 @@ export function ChannelConnectDialog({
   }
 
   const steps = [0, 1, 2] as const;
+  const channelName = t(`channels.${channel}.name`);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -42,7 +43,7 @@ export function ChannelConnectDialog({
             {t("eyebrow")}
           </div>
           <DialogTitle className="mt-3 text-xl">
-            {t("title", { channel: t(`channels.${channel}.name`) })}
+            {t("title", { channel: channelName })}
           </DialogTitle>
           <DialogDescription className="text-sm leading-6 text-discord-muted">
             {t(`channels.${channel}.description`)}
@@ -68,10 +69,10 @@ export function ChannelConnectDialog({
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-foreground">
-                    {t(`steps.${step}.title`)}
+                    {t(`steps.${step}.title`, { channel: channelName })}
                   </p>
                   <p className="mt-1 text-sm leading-6 text-discord-muted">
-                    {t(`steps.${step}.body`, { channel: t(`channels.${channel}.name`) })}
+                    {t(`steps.${step}.body`, { channel: channelName })}
                   </p>
                 </div>
               </div>

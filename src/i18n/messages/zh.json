@@ -108,6 +108,9 @@
     }
   },
   "landing": {
+    "nav": {
+      "language": "语言"
+    },
     "hero": {
       "badge": "不只是另一个聊天机器人",
       "titlePrefix": "真正能",

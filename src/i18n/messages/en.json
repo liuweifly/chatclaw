@@ -108,6 +108,9 @@
     }
   },
   "landing": {
+    "nav": {
+      "language": "Language"
+    },
     "hero": {
       "badge": "Not another chatbot",
       "titlePrefix": "Your AI that",
