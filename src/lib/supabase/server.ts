@@ -154,6 +154,12 @@ function buildQuery(filters?: Record<string, FilterValue>, extra?: URLSearchPara
 }
 
 export function createServerClient() {
+  const serviceRoleKey = getServiceRoleKey();
+  const serviceRoleAuth = {
+    useServiceKey: true,
+    accessToken: serviceRoleKey,
+  };
+
   return {
     auth: {
       getUser: getServerUser,
@@ -189,7 +195,7 @@ export function createServerClient() {
                 ? { Accept: "application/vnd.pgrst.object+json" }
                 : undefined,
             },
-            { useServiceKey: true }
+            serviceRoleAuth
           )) as T;
         } catch (error) {
           if (
@@ -222,7 +228,7 @@ export function createServerClient() {
             headers: { Prefer: prefer },
             body: JSON.stringify(value),
           },
-          { useServiceKey: true }
+          serviceRoleAuth
         )) as T[];
       },
       update: async <T>(
@@ -239,7 +245,7 @@ export function createServerClient() {
             headers: { Prefer: "return=representation" },
             body: JSON.stringify(value),
           },
-          { useServiceKey: true }
+          serviceRoleAuth
         )) as T[];
       },
       delete: async (table: string, filters: Record<string, FilterValue>) => {
@@ -249,7 +255,7 @@ export function createServerClient() {
             method: "DELETE",
             headers: { Prefer: "return=minimal" },
           },
-          { useServiceKey: true }
+          serviceRoleAuth
         );
       },
     },
@@ -258,7 +264,7 @@ export function createServerClient() {
         await serviceFetch(
           `/auth/v1/admin/users/${userId}`,
           { method: "DELETE" },
-          { useServiceKey: true, accessToken: getServiceRoleKey() }
+          serviceRoleAuth
         );
       },
     },
