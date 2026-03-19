@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
+  AlertCircle,
   Brain,
   Bot,
   FileText,
@@ -17,6 +18,10 @@ import {
 } from "lucide-react";
 import { ChannelConnectDialog } from "@/components/channel-connect-dialog";
 import type {
+  ChannelKey,
+  ChannelSummary,
+} from "@/lib/channel-integrations";
+import type {
   LobsterWorkspaceResponse,
   LobsterWorkspaceSkill,
 } from "@/lib/lobster-workspace";
@@ -25,13 +30,13 @@ import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { getPrimaryAgent } from "@/lib/workspace";
 
-export const CHANNELS = [
-  { key: "web", status: "connected" as const, icon: "🌐" },
-  { key: "telegram", status: "available" as const, icon: "✈️" },
-  { key: "feishu", status: "available" as const, icon: "🐦" },
-  { key: "discord", status: "available" as const, icon: "🎮" },
-  { key: "slack", status: "coming_soon" as const, icon: "💬" },
-] as const;
+const CHANNEL_CARD_META: Record<ChannelKey, { icon: string }> = {
+  web: { icon: "🌐" },
+  telegram: { icon: "✈️" },
+  feishu: { icon: "🐦" },
+  discord: { icon: "🎮" },
+  slack: { icon: "💬" },
+};
 
 export const CAPABILITIES = [
   { key: "browsing", active: true, icon: Search },
@@ -46,17 +51,186 @@ export const CAPABILITIES = [
 
 export function ChannelsPanel({ onOpenSettings }: { onOpenSettings: () => void }) {
   const t = useTranslations("workspace.panels.channels");
-  const [selectedChannel, setSelectedChannel] = useState<"telegram" | "feishu" | "discord" | null>(null);
+  const { state } = useStore();
+  const [channels, setChannels] = useState<ChannelSummary[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedChannel, setSelectedChannel] = useState<"telegram" | "feishu" | null>(null);
+  const [pendingAction, setPendingAction] = useState<"connect" | "disconnect" | null>(null);
+  const [mutationError, setMutationError] = useState<string | null>(null);
+
+  const loadChannels = useCallback(async () => {
+    if (!state.activeCompanyId) {
+      setChannels([]);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/workspaces/${state.activeCompanyId}/channels`, {
+        cache: "no-store",
+      });
+      const payload = (await response.json()) as
+        | { channels?: ChannelSummary[]; error?: string }
+        | { error?: string };
+
+      if (!response.ok) {
+        throw new Error(extractErrorMessage(payload, "Could not load channels"));
+      }
+
+      setChannels(Array.isArray(payload.channels) ? payload.channels : []);
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Could not load channels");
+    } finally {
+      setLoading(false);
+    }
+  }, [state.activeCompanyId]);
+
+  useEffect(() => {
+    void loadChannels();
+  }, [loadChannels]);
+
+  const selectedIntegration =
+    channels.find((channel) => channel.key === selectedChannel) ?? null;
+
+  const connectTelegram = useCallback(
+    async (token: string) => {
+      if (!state.activeCompanyId) {
+        return;
+      }
+
+      setPendingAction("connect");
+      setMutationError(null);
+
+      try {
+        const response = await fetch(
+          `/api/workspaces/${state.activeCompanyId}/channels/telegram/connect`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token }),
+          }
+        );
+        const payload = (await response.json()) as { error?: string };
+
+        if (!response.ok) {
+          throw new Error(extractErrorMessage(payload, "Could not connect Telegram"));
+        }
+
+        await loadChannels();
+      } catch (caughtError) {
+        setMutationError(
+          caughtError instanceof Error ? caughtError.message : "Could not connect Telegram"
+        );
+      } finally {
+        setPendingAction(null);
+      }
+    },
+    [loadChannels, state.activeCompanyId]
+  );
+
+  const startFeishu = useCallback(async () => {
+    if (!state.activeCompanyId) {
+      return;
+    }
+
+    setPendingAction("connect");
+    setMutationError(null);
+
+    try {
+      const response = await fetch(
+        `/api/workspaces/${state.activeCompanyId}/channels/feishu/connect`,
+        {
+          method: "POST",
+        }
+      );
+      const payload = (await response.json()) as { connectUrl?: string; error?: string };
+
+      if (!response.ok || !payload.connectUrl) {
+        throw new Error(extractErrorMessage(payload, "Could not start Feishu install"));
+      }
+
+      await loadChannels();
+      window.open(payload.connectUrl, "_blank", "noopener,noreferrer");
+    } catch (caughtError) {
+      setMutationError(
+        caughtError instanceof Error ? caughtError.message : "Could not start Feishu install"
+      );
+    } finally {
+      setPendingAction(null);
+    }
+  }, [loadChannels, state.activeCompanyId]);
+
+  const disconnectSelected = useCallback(async () => {
+    if (!state.activeCompanyId || !selectedIntegration?.id) {
+      return;
+    }
+
+    setPendingAction("disconnect");
+    setMutationError(null);
+
+    try {
+      const response = await fetch(
+        `/api/workspaces/${state.activeCompanyId}/channels/${selectedIntegration.id}`,
+        {
+          method: "DELETE",
+        }
+      );
+      const payload = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        throw new Error(extractErrorMessage(payload, "Could not disconnect channel"));
+      }
+
+      await loadChannels();
+    } catch (caughtError) {
+      setMutationError(
+        caughtError instanceof Error ? caughtError.message : "Could not disconnect channel"
+      );
+    } finally {
+      setPendingAction(null);
+    }
+  }, [loadChannels, selectedIntegration?.id, state.activeCompanyId]);
 
   return (
     <>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium text-foreground">{t("subtitle")}</p>
+          <p className="mt-1 text-xs text-discord-muted">{t("helper")}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => void loadChannels()}
+          disabled={loading}
+          className="inline-flex items-center gap-2 rounded-lg bg-discord-dark px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-discord-darker disabled:opacity-60"
+        >
+          <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
+          {t("refresh")}
+        </button>
+      </div>
+
+      {error && (
+        <div className="mb-4 flex items-start gap-3 rounded-xl border border-discord-red/30 bg-discord-red/10 p-4">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-discord-red" />
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-foreground">{t("loadFailed")}</p>
+            <p className="mt-1 text-sm leading-6 text-discord-muted">{error}</p>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-3">
-        {CHANNELS.map((channel) => (
+        {channels.map((channel) => (
           <div
             key={channel.key}
             className="flex items-center gap-3 rounded-xl border border-white/6 bg-discord-mid p-3"
           >
-            <span className="text-xl">{channel.icon}</span>
+            <span className="text-xl">{CHANNEL_CARD_META[channel.key].icon}</span>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-foreground">
@@ -66,8 +240,11 @@ export function ChannelsPanel({ onOpenSettings }: { onOpenSettings: () => void }
                   className={cn(
                     "rounded-full px-2 py-0.5 text-[10px] font-semibold",
                     channel.status === "connected" && "bg-[#23a55a]/20 text-[#23a55a]",
-                    channel.status === "available" &&
+                    channel.status === "not_connected" &&
                       "bg-discord-blurple/20 text-discord-blurple",
+                    channel.status === "action_required" &&
+                      "bg-[#f0b232]/20 text-[#f0b232]",
+                    channel.status === "error" && "bg-discord-red/20 text-discord-red",
                     channel.status === "coming_soon" && "bg-white/10 text-discord-muted"
                   )}
                 >
@@ -77,14 +254,28 @@ export function ChannelsPanel({ onOpenSettings }: { onOpenSettings: () => void }
               <p className="mt-0.5 text-xs text-discord-muted">
                 {t(`items.${channel.key}.description`)}
               </p>
+              {(channel.accountLabel || channel.details || channel.lastError) && (
+                <p className="mt-2 text-xs text-discord-muted">
+                  {channel.lastError ||
+                    channel.accountLabel ||
+                    channel.details}
+                </p>
+              )}
             </div>
-            {channel.status === "available" && (
+            {channel.connectMode !== "none" && (
               <button
                 type="button"
                 onClick={() => setSelectedChannel(channel.key)}
-                className="shrink-0 rounded-lg bg-discord-blurple px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-discord-blurple/80"
+                disabled={loading}
+                className="shrink-0 rounded-lg bg-discord-blurple px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-discord-blurple/80 disabled:opacity-60"
               >
-                {t("connect")}
+                {channel.status === "connected"
+                  ? t("manage")
+                  : channel.status === "error"
+                    ? t("reconnect")
+                    : channel.status === "action_required"
+                      ? t("continue")
+                      : t("connect")}
               </button>
             )}
           </div>
@@ -94,9 +285,16 @@ export function ChannelsPanel({ onOpenSettings }: { onOpenSettings: () => void }
       <ChannelConnectDialog
         channel={selectedChannel}
         open={selectedChannel !== null}
+        integration={selectedIntegration}
+        pending={pendingAction}
+        error={mutationError}
+        onConnectTelegram={connectTelegram}
+        onStartFeishu={startFeishu}
+        onDisconnect={disconnectSelected}
         onOpenChange={(open) => {
           if (!open) {
             setSelectedChannel(null);
+            setMutationError(null);
           }
         }}
         onOpenSettings={onOpenSettings}
