@@ -1,30 +1,11 @@
-export const SUPABASE_ACCESS_TOKEN_COOKIE = "chatclaw-sb-access-token";
-export const SUPABASE_REFRESH_TOKEN_COOKIE = "chatclaw-sb-refresh-token";
-export const SUPABASE_SESSION_STORAGE_KEY = "chatclaw-supabase-session";
+import type { CookieOptionsWithName } from "@supabase/ssr";
+import type { Session, User } from "@supabase/supabase-js";
 
-export interface SupabaseUserMetadata {
-  avatar_url?: string;
-  full_name?: string;
-  name?: string;
-  picture?: string;
-  [key: string]: unknown;
-}
+export const SUPABASE_AUTH_COOKIE_NAME = "chatclaw-sb-auth";
+const THIRTY_DAYS_IN_SECONDS = 60 * 60 * 24 * 30;
 
-export interface SupabaseUser {
-  id: string;
-  email?: string;
-  user_metadata?: SupabaseUserMetadata;
-  app_metadata?: Record<string, unknown>;
-}
-
-export interface SupabaseSession {
-  access_token: string;
-  refresh_token: string;
-  expires_in: number;
-  expires_at: number;
-  token_type: string;
-  user: SupabaseUser;
-}
+export type SupabaseUser = User;
+export type SupabaseSession = Session;
 
 export interface ProfileRecord {
   id: string;
@@ -66,6 +47,30 @@ export interface AccountPayload {
   subscription: SubscriptionRecord | null;
 }
 
+export function getSupabaseCookieOptions(): CookieOptionsWithName {
+  return {
+    name: SUPABASE_AUTH_COOKIE_NAME,
+    path: "/",
+    maxAge: THIRTY_DAYS_IN_SECONDS,
+    sameSite: "lax",
+    secure: true,
+    httpOnly: true,
+  };
+}
+
+export function mergeSupabaseCookieOptions(
+  overrides: Partial<CookieOptionsWithName> = {}
+): CookieOptionsWithName {
+  return {
+    ...getSupabaseCookieOptions(),
+    ...overrides,
+    path: "/",
+    sameSite: "lax",
+    secure: true,
+    httpOnly: true,
+  };
+}
+
 export function getSupabaseUrl() {
   const value = process.env.NEXT_PUBLIC_SUPABASE_URL;
   if (!value) {
@@ -99,24 +104,6 @@ export function decodeJwtPayload(token: string) {
   }
 }
 
-export function getSessionExpiry(session: Pick<SupabaseSession, "expires_at" | "access_token">) {
-  if (session.expires_at) {
-    return session.expires_at;
-  }
-  const payload = decodeJwtPayload(session.access_token);
-  return typeof payload?.exp === "number" ? payload.exp : 0;
-}
-
-export function sessionExpiresSoon(
-  session: Pick<SupabaseSession, "expires_at" | "access_token"> | null | undefined,
-  bufferSeconds = 60
-) {
-  if (!session) return true;
-  const expiry = getSessionExpiry(session);
-  if (!expiry) return true;
-  return expiry - Math.floor(Date.now() / 1000) <= bufferSeconds;
-}
-
 export function pickUserName(user: SupabaseUser | null | undefined, profile?: ProfileRecord | null) {
   return (
     profile?.name ||
@@ -134,26 +121,4 @@ export function pickUserAvatar(user: SupabaseUser | null | undefined, profile?: 
     user?.user_metadata?.picture ||
     null
   );
-}
-
-export function readSessionFromHash(hash: string) {
-  const raw = hash.startsWith("#") ? hash.slice(1) : hash;
-  const params = new URLSearchParams(raw);
-  const accessToken = params.get("access_token");
-  const refreshToken = params.get("refresh_token");
-  const expiresIn = Number(params.get("expires_in") || "3600");
-  const tokenType = params.get("token_type") || "bearer";
-
-  if (!accessToken || !refreshToken) {
-    return null;
-  }
-
-  return {
-    access_token: accessToken,
-    refresh_token: refreshToken,
-    expires_in: expiresIn,
-    expires_at: Math.floor(Date.now() / 1000) + expiresIn,
-    token_type: tokenType,
-    user: { id: "" },
-  } satisfies SupabaseSession;
 }

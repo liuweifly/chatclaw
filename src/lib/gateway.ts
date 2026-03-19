@@ -15,23 +15,37 @@ export type GatewayEventHandler = {
 // ── Gateway Client (HTTP SSE) ──────────────────────────────────────
 
 export class GatewayClient {
-  private baseUrl: string = "";
-  private token: string = "";
   private handlers: GatewayEventHandler = {};
   private destroyed = false;
   private connected = false;
   private activeAbortControllers = new Map<string, AbortController>();
 
-  configure(url: string, token: string, handlers: GatewayEventHandler): void {
-    this.baseUrl = url.replace(/^ws:\/\//, "http://").replace(/^wss:\/\//, "https://");
-    this.token = token;
+  configure(handlers: GatewayEventHandler): void {
     this.handlers = handlers;
   }
 
-  connect(): void {
+  async connect(): Promise<void> {
     if (this.destroyed) return;
-    this.connected = true;
-    this.handlers.onConnectionStatus?.("connected");
+    this.handlers.onConnectionStatus?.("connecting");
+
+    try {
+      const response = await fetch("/api/detect-gateway", { cache: "no-store" });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const payload = (await response.json()) as {
+        found?: boolean;
+        hasToken?: boolean;
+      };
+
+      this.connected = Boolean(payload.found && payload.hasToken);
+      this.handlers.onConnectionStatus?.(this.connected ? "connected" : "disconnected");
+    } catch (error) {
+      this.connected = false;
+      this.handlers.onConnectionStatus?.("error");
+      this.handlers.onError?.(String(error));
+    }
   }
 
   disconnect(): void {
@@ -64,8 +78,6 @@ export class GatewayClient {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-gateway-url": this.baseUrl,
-          "x-gateway-token": this.token,
           "x-openclaw-agent-id": agentId,
           "x-openclaw-session-key": sessionKey,
         },
@@ -226,30 +238,29 @@ export function resetGateway(): void {
 // ── Test Connection (HTTP) ────────────────────────────────────────
 
 export async function testConnection(
-  url: string,
-  token: string
 ): Promise<{ ok: boolean; error?: string }> {
-  const baseUrl = url.replace(/^ws:\/\//, "http://").replace(/^wss:\/\//, "https://");
   try {
-    const res = await fetch("/api/chat", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-gateway-url": baseUrl,
-        "x-gateway-token": token,
-        "x-openclaw-agent-id": "main",
-      },
-      body: JSON.stringify({
-        model: "openclaw",
-        messages: [{ role: "user", content: "ping" }],
-        max_tokens: 1,
-      }),
+    const res = await fetch("/api/detect-gateway", {
+      cache: "no-store",
       signal: AbortSignal.timeout(10_000),
     });
-    if (res.status === 401) {
-      return { ok: false, error: "Authentication failed" };
+    if (!res.ok) {
+      return { ok: false, error: `HTTP ${res.status}` };
     }
-    // Any response from the endpoint means connectivity works
+
+    const payload = (await res.json()) as {
+      found?: boolean;
+      hasToken?: boolean;
+    };
+
+    if (!payload.found) {
+      return { ok: false, error: "Gateway not detected" };
+    }
+
+    if (!payload.hasToken) {
+      return { ok: false, error: "Gateway token missing on server" };
+    }
+
     return { ok: true };
   } catch (e) {
     if (e instanceof Error && e.name === "TimeoutError") {

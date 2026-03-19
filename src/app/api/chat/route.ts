@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { getGatewayConfig, toGatewayHttpBaseUrl } from "@/lib/gateway-config";
 import { getServerUser } from "@/lib/supabase/server";
 
 export async function POST(req: NextRequest) {
@@ -7,28 +8,26 @@ export async function POST(req: NextRequest) {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const gatewayUrl = req.headers.get("x-gateway-url") || "";
-  const gatewayToken = req.headers.get("x-gateway-token") || "";
+  const gateway = await getGatewayConfig();
+  if (!gateway) {
+    return new Response("Gateway is not configured on the server.", { status: 503 });
+  }
+
   const agentId = req.headers.get("x-openclaw-agent-id") || "main";
   const sessionKey = req.headers.get("x-openclaw-session-key") || "";
-
   const body = await req.text();
-
-  const baseUrl = gatewayUrl
-    .trim()
-    .replace(/^ws:\/\//, "http://")
-    .replace(/^wss:\/\//, "https://")
-    .replace(/\/+$/, "");
+  const baseUrl = toGatewayHttpBaseUrl(gateway.url);
 
   const upstream = await fetch(`${baseUrl}/v1/chat/completions`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${gatewayToken}`,
+      Authorization: `Bearer ${gateway.token}`,
       "Content-Type": "application/json",
       "x-openclaw-agent-id": agentId,
       "x-openclaw-session-key": sessionKey,
     },
     body,
+    cache: "no-store",
   });
 
   if (!upstream.ok) {

@@ -58,8 +58,6 @@ export interface Company {
   name: string;
   logo?: string;
   description?: string;
-  gatewayUrl: string;
-  gatewayToken: string;
   defaultAgentId?: string;
   createdAt: number;
   updatedAt: number;

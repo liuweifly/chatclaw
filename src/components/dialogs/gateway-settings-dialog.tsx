@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import {
   CheckCircle2,
   Loader2,
@@ -34,16 +34,15 @@ function GatewaySettingsForm({
   const { actions } = useStore();
   const [name, setName] = useState(company.name);
   const [description, setDescription] = useState(company.description || "");
-  const [gatewayUrl, setGatewayUrl] = useState(company.gatewayUrl || "");
-  const [gatewayToken, setGatewayToken] = useState(company.gatewayToken || "");
+  const [gatewayUrl, setGatewayUrl] = useState("");
+  const [gatewayReady, setGatewayReady] = useState(false);
   const [testState, setTestState] = useState<"idle" | "testing" | "success" | "error">("idle");
   const [testError, setTestError] = useState("");
 
   async function handleTest() {
-    if (!gatewayUrl || !gatewayToken) return;
     setTestState("testing");
     setTestError("");
-    const result = await testConnection(gatewayUrl, gatewayToken);
+    const result = await testConnection();
     if (result.ok) {
       setTestState("success");
     } else {
@@ -57,8 +56,6 @@ function GatewaySettingsForm({
     await actions.updateCompany(company.id, {
       name: name.trim(),
       description: description.trim() || undefined,
-      gatewayUrl: gatewayUrl.trim(),
-      gatewayToken: gatewayToken.trim(),
     });
     onClose();
   }
@@ -68,19 +65,23 @@ function GatewaySettingsForm({
     onClose();
   }
 
-  async function handleDetect() {
+  const handleDetect = useCallback(async () => {
     try {
       const res = await fetch("/api/detect-gateway");
       const data = await res.json();
       if (data.found) {
         setGatewayUrl(data.url);
-        setGatewayToken(data.token);
+        setGatewayReady(Boolean(data.hasToken));
         setTestState("idle");
+        setTestError("");
+      } else {
+        setGatewayUrl("");
+        setGatewayReady(false);
       }
     } catch {
       // Failed to detect
     }
-  }
+  }, []);
 
   return (
     <>
@@ -135,36 +136,25 @@ function GatewaySettingsForm({
           <div className="space-y-3">
             <div>
               <label className="text-xs text-discord-muted">Gateway URL</label>
-              <Input
-                value={gatewayUrl}
-                onChange={(event) => {
-                  setGatewayUrl(event.target.value);
-                  setTestState("idle");
-                }}
-                placeholder="ws://localhost:18789"
-                className="mt-1 border-none bg-discord-dark font-mono text-sm text-foreground"
-              />
+              <div className="mt-1 rounded-md bg-discord-dark px-3 py-2 font-mono text-sm text-foreground">
+                {gatewayUrl || "Not detected"}
+              </div>
             </div>
 
             <div>
-              <label className="text-xs text-discord-muted">API Token</label>
-              <Input
-                type="password"
-                value={gatewayToken}
-                onChange={(event) => {
-                  setGatewayToken(event.target.value);
-                  setTestState("idle");
-                }}
-                placeholder="Your gateway token"
-                className="mt-1 border-none bg-discord-dark font-mono text-sm text-foreground"
-              />
+              <label className="text-xs text-discord-muted">Gateway Auth</label>
+              <div className="mt-1 rounded-md bg-discord-dark px-3 py-2 text-sm text-discord-muted">
+                {gatewayReady
+                  ? "Credentials are configured on the server."
+                  : "Gateway token is not configured on the server."}
+              </div>
             </div>
 
             <div className="flex gap-2">
               <Button
                 variant="secondary"
                 onClick={handleTest}
-                disabled={!gatewayUrl || !gatewayToken || testState === "testing"}
+                disabled={testState === "testing"}
                 className="flex-1 bg-discord-dark text-foreground hover:bg-discord-darker"
               >
                 {testState === "testing" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

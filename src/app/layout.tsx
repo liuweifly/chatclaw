@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { AppProviders } from "@/components/app-providers";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "ChatClaw — AI Agent Platform",
   description:

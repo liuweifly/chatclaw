@@ -23,36 +23,31 @@ export function CreateCompanyDialog({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [gatewayUrl, setGatewayUrl] = useState("");
-  const [gatewayToken, setGatewayToken] = useState("");
+  const [gatewayReady, setGatewayReady] = useState(false);
 
   // Auto-detect gateway on dialog open
   useEffect(() => {
-    if (open && !gatewayUrl && !gatewayToken) {
+    if (open && !gatewayUrl) {
       fetch("/api/detect-gateway")
         .then((res) => res.json())
         .then((data) => {
           if (data.found) {
             setGatewayUrl(data.url);
-            setGatewayToken(data.token);
+            setGatewayReady(Boolean(data.hasToken));
           }
         })
         .catch(() => {});
     }
-  }, [open, gatewayUrl, gatewayToken]);
+  }, [open, gatewayUrl]);
 
   async function handleCreate() {
     if (!name.trim()) return;
-    const company = await actions.createCompany(
-      name.trim(),
-      gatewayUrl.trim(),
-      gatewayToken.trim(),
-      description.trim() || undefined
-    );
+    const company = await actions.createCompany(name.trim(), description.trim() || undefined);
     await actions.selectCompany(company.id);
     setName("");
     setDescription("");
     setGatewayUrl("");
-    setGatewayToken("");
+    setGatewayReady(false);
     onOpenChange(false);
   }
 
@@ -91,26 +86,22 @@ export function CreateCompanyDialog({
           </div>
           <div>
             <label className="text-xs font-bold uppercase tracking-wider text-discord-muted">
-              Gateway URL
+              Server Gateway
             </label>
-            <Input
-              value={gatewayUrl}
-              onChange={(e) => setGatewayUrl(e.target.value)}
-              placeholder="ws://localhost:18789"
-              className="mt-2 bg-discord-dark border-none text-foreground placeholder:text-discord-muted font-mono text-sm"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-bold uppercase tracking-wider text-discord-muted">
-              API Token
-            </label>
-            <Input
-              type="password"
-              value={gatewayToken}
-              onChange={(e) => setGatewayToken(e.target.value)}
-              placeholder="Your gateway token"
-              className="mt-2 bg-discord-dark border-none text-foreground placeholder:text-discord-muted font-mono text-sm"
-            />
+            <div className="mt-2 rounded-md bg-discord-dark px-3 py-2 text-sm text-discord-muted">
+              {gatewayUrl ? (
+                <>
+                  <p className="font-mono text-foreground">{gatewayUrl}</p>
+                  <p className="mt-1">
+                    {gatewayReady
+                      ? "Gateway credentials are managed on the server."
+                      : "Gateway token is not configured on the server."}
+                  </p>
+                </>
+              ) : (
+                <p>No server gateway detected yet.</p>
+              )}
+            </div>
           </div>
         </div>
         <DialogFooter>

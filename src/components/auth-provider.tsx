@@ -40,6 +40,14 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+function stripAuthParams(url: URL) {
+  url.searchParams.delete("code");
+  url.searchParams.delete("error");
+  url.searchParams.delete("error_code");
+  url.searchParams.delete("error_description");
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const client = useMemo(() => createBrowserClient(), []);
   const setLocale = useSetLocale();
@@ -49,15 +57,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [subscription, setSubscription] = useState<SubscriptionRecord | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const clearAuthState = useCallback(() => {
+    setSession(null);
+    setUser(null);
+    setProfile(null);
+    setSubscription(null);
+  }, []);
+
+  const persistSession = useCallback(async (nextSession: SupabaseSession | null) => {
+    if (!nextSession?.access_token || !nextSession.refresh_token) {
+      clearAuthState();
+      return;
+    }
+
+    const response = await fetch("/api/auth/session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        accessToken: nextSession.access_token,
+        refreshToken: nextSession.refresh_token,
+      }),
+    });
+
+    if (!response.ok) {
+      const message = await response.text();
+      throw new Error(message || "Could not persist session");
+    }
+
+    setSession(nextSession);
+    setUser(nextSession.user);
+  }, [clearAuthState]);
+
   const refreshAccount = useCallback(async () => {
     const response = await fetch("/api/account", { cache: "no-store" });
     if (!response.ok) {
       if (response.status === 401) {
-        setProfile(null);
-        setSubscription(null);
+        clearAuthState();
       }
       return;
     }
+
     const payload = (await response.json()) as AccountPayload;
     setUser(payload.user);
     setProfile(payload.profile);
@@ -65,37 +104,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (payload.profile?.locale === "en" || payload.profile?.locale === "zh") {
       setLocale(payload.profile.locale);
     }
-  }, [setLocale]);
+  }, [clearAuthState, setLocale]);
 
   useEffect(() => {
     let mounted = true;
 
-    void client.initialize().then(async (nextSession) => {
-      if (!mounted) return;
-      setSession(nextSession);
-      setUser(nextSession?.user ?? null);
-      if (nextSession?.user) {
-        await refreshAccount();
-      }
-      setLoading(false);
-    });
+    void (async () => {
+      try {
+        const url = new URL(window.location.href);
+        const authCode = url.searchParams.get("code");
 
-    const authSubscription = client.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-      setUser(nextSession?.user ?? null);
-      if (nextSession?.user) {
-        void refreshAccount();
-      } else {
-        setProfile(null);
-        setSubscription(null);
+        if (authCode) {
+          const { data, error } = await client.auth.exchangeCodeForSession(authCode);
+          if (error) {
+            throw error;
+          }
+
+          await persistSession(data.session);
+          window.history.replaceState({}, document.title, stripAuthParams(url));
+        }
+
+        await refreshAccount();
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
       }
-    });
+    })();
 
     return () => {
       mounted = false;
-      authSubscription.data.subscription.unsubscribe();
     };
-  }, [client, refreshAccount]);
+  }, [client, persistSession, refreshAccount]);
 
   const signInWithGoogle = useCallback(async () => {
     await client.auth.signInWithOAuth({
@@ -107,14 +147,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [client]);
 
   const signInWithPassword = useCallback(async (email: string, password: string) => {
-    await client.auth.signInWithPassword({ email, password });
+    const { data, error } = await client.auth.signInWithPassword({ email, password });
+    if (error) {
+      throw error;
+    }
+    await persistSession(data.session);
     await refreshAccount();
-  }, [client, refreshAccount]);
+  }, [client, persistSession, refreshAccount]);
 
   const signUpWithPassword = useCallback(async (email: string, password: string) => {
-    const result = await client.auth.signUp({ email, password });
+    const { data, error } = await client.auth.signUp({ email, password });
+    if (error) {
+      throw error;
+    }
 
-    if (result.data.session) {
+    if (data.session) {
+      await persistSession(data.session);
       await refreshAccount();
       return { signedIn: true };
     }
@@ -125,13 +173,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       return { signedIn: false };
     }
-  }, [client, refreshAccount, signInWithPassword]);
+  }, [client, persistSession, refreshAccount, signInWithPassword]);
 
   const signOut = useCallback(async () => {
-    await client.auth.signOut();
-    setProfile(null);
-    setSubscription(null);
-  }, [client]);
+    await client.auth.signOut().catch(() => null);
+    await fetch("/api/auth/session", { method: "DELETE" }).catch(() => null);
+    clearAuthState();
+  }, [clearAuthState, client]);
 
   const updateProfileLocale = useCallback(async (locale: string) => {
     const nextLocale = resolveLocale(locale);
@@ -158,8 +206,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!response.ok) {
       throw new Error("Could not delete account");
     }
-    await client.auth.signOut();
-  }, [client]);
+    await fetch("/api/auth/session", { method: "DELETE" }).catch(() => null);
+    await client.auth.signOut().catch(() => null);
+    clearAuthState();
+  }, [clearAuthState, client]);
 
   const value = useMemo<AuthContextValue>(
     () => ({

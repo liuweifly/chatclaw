@@ -62,9 +62,6 @@ export function ChatArea() {
   const target = state.activeChatTarget;
   const isConnected = state.connectionStatus === "connected";
   const activeCompany = state.companies.find((company) => company.id === state.activeCompanyId);
-  const companyAgents = state.activeCompanyId
-    ? state.agents.filter((agent) => agent.companyId === state.activeCompanyId)
-    : [];
 
   // Get chat target info
   const targetAgent = target?.type === "agent"
@@ -198,7 +195,7 @@ export function ChatArea() {
       let bootstrapData:
         | {
             found?: boolean;
-            gateway?: { url?: string; token?: string };
+            gateway?: { url?: string; hasToken?: boolean };
             agents?: Array<{ id: string; name: string }>;
           }
         | null = null;
@@ -235,13 +232,9 @@ export function ChatArea() {
       }
 
       if (!companyId) {
-        const gatewayUrl = bootstrapData?.found ? bootstrapData.gateway?.url ?? "" : "";
-        const gatewayToken = bootstrapData?.found ? bootstrapData.gateway?.token ?? "" : "";
         const company = await actions.createCompany(
           `${trimmedName} Workspace`,
-          gatewayUrl,
-          gatewayToken,
-          gatewayUrl
+          bootstrapData?.found
             ? `Personal demo workspace for ${trimmedName}.`
             : t("errors.gatewayHint", { name: trimmedName })
         );

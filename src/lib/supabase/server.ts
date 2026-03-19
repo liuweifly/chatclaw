@@ -1,12 +1,10 @@
+import { createServerClient as createSupabaseServerClient } from "@supabase/ssr";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import {
   getSupabaseAnonKey,
+  getSupabaseCookieOptions,
   getSupabaseUrl,
-  sessionExpiresSoon,
-  SUPABASE_ACCESS_TOKEN_COOKIE,
-  SUPABASE_REFRESH_TOKEN_COOKIE,
-  type SupabaseSession,
-  type SupabaseUser,
 } from "@/lib/supabase/shared";
 
 type FilterValue = string | number | boolean | null;
@@ -24,115 +22,70 @@ function getServiceRoleKey() {
 
 function encodeFilterValue(value: FilterValue) {
   if (value === null) return "is.null";
-  if (typeof value === "number" || typeof value === "boolean") {
-    return `eq.${value}`;
-  }
   return `eq.${value}`;
 }
 
-async function fetchUser(accessToken: string) {
-  const response = await fetch(`${getSupabaseUrl()}/auth/v1/user`, {
-    headers: {
-      apikey: getSupabaseAnonKey(),
-      Authorization: `Bearer ${accessToken}`,
+async function createAuthClient() {
+  const cookieStore = await cookies();
+
+  return createSupabaseServerClient(getSupabaseUrl(), getSupabaseAnonKey(), {
+    cookieOptions: getSupabaseCookieOptions(),
+    cookies: {
+      encode: "tokens-only",
+      getAll: () =>
+        cookieStore.getAll().map(({ name, value }) => ({ name, value })),
     },
-    cache: "no-store",
   });
+}
 
-  if (!response.ok) {
+async function getAuthContext() {
+  const client = await createAuthClient();
+  const {
+    data: { user },
+  } = await client.auth.getUser();
+
+  if (!user) {
     return null;
   }
 
-  return (await response.json()) as SupabaseUser;
-}
+  const {
+    data: { session },
+  } = await client.auth.getSession();
 
-async function refreshSession(refreshToken: string) {
-  const response = await fetch(
-    `${getSupabaseUrl()}/auth/v1/token?grant_type=refresh_token`,
-    {
-      method: "POST",
-      headers: {
-        apikey: getSupabaseAnonKey(),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ refresh_token: refreshToken }),
-      cache: "no-store",
-    }
-  );
-
-  if (!response.ok) {
+  if (!session?.access_token) {
     return null;
   }
 
-  const payload = (await response.json()) as SupabaseSession & {
-    session?: SupabaseSession;
-  };
-  return payload.session ?? payload;
-}
-
-async function authCookies() {
-  const store = await cookies();
   return {
-    accessToken: store.get(SUPABASE_ACCESS_TOKEN_COOKIE)?.value ?? null,
-    refreshToken: store.get(SUPABASE_REFRESH_TOKEN_COOKIE)?.value ?? null,
+    user,
+    session,
   };
 }
 
 export async function getServerSession() {
-  const { accessToken, refreshToken } = await authCookies();
-
-  if (!accessToken && !refreshToken) {
-    return null;
-  }
-
-  let user = accessToken ? await fetchUser(accessToken) : null;
-  let session: SupabaseSession | null =
-    accessToken && user
-      ? {
-          access_token: accessToken,
-          refresh_token: refreshToken ?? "",
-          expires_at: 0,
-          expires_in: 0,
-          token_type: "bearer",
-          user,
-        }
-      : null;
-
-  if ((!session || sessionExpiresSoon(session, 0)) && refreshToken) {
-    const refreshed = await refreshSession(refreshToken);
-    if (refreshed) {
-      user = refreshed.user ?? (await fetchUser(refreshed.access_token));
-      if (user) {
-        session = { ...refreshed, user };
-      }
-    }
-  }
-
-  return session;
+  return (await getAuthContext())?.session ?? null;
 }
 
 export async function getServerUser() {
-  const session = await getServerSession();
-  return session?.user ?? null;
+  return (await getAuthContext())?.user ?? null;
 }
 
 async function getDbAuth(options: ServerClientOptions) {
   if (options.useServiceRole) {
-    const serviceRoleKey = getServiceRoleKey();
     return {
       useServiceKey: true,
-      accessToken: serviceRoleKey,
+      accessToken: getServiceRoleKey(),
     };
   }
 
-  const session = await getServerSession();
-  if (!session?.access_token) {
+  const context = await getAuthContext();
+  if (!context?.session.access_token) {
     throw new Error("Missing authenticated Supabase session");
   }
 
   return {
     useServiceKey: false,
-    accessToken: session.access_token,
+    accessToken: context.session.access_token,
   };
 }
 
@@ -192,7 +145,7 @@ export function createServerClient(clientOptions: ServerClientOptions = {}) {
           limit?: number;
           maybeSingle?: boolean;
         }
-        ) => {
+      ) => {
         const auth = await getDbAuth(clientOptions);
         const params = new URLSearchParams();
         params.set("select", options?.columns ?? "*");
@@ -282,12 +235,21 @@ export function createServerClient(clientOptions: ServerClientOptions = {}) {
     },
     admin: {
       deleteUser: async (userId: string) => {
-        const auth = await getDbAuth({ useServiceRole: true });
-        await serviceFetch(
-          `/auth/v1/admin/users/${userId}`,
-          { method: "DELETE" },
-          auth
+        const serviceRoleClient = createSupabaseClient(
+          getSupabaseUrl(),
+          getServiceRoleKey(),
+          {
+            auth: {
+              persistSession: false,
+              autoRefreshToken: false,
+            },
+          }
         );
+
+        const { error } = await serviceRoleClient.auth.admin.deleteUser(userId);
+        if (error) {
+          throw error;
+        }
       },
     },
   };

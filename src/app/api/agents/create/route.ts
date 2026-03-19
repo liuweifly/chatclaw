@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { readFile, writeFile, mkdir } from "fs/promises";
-import { homedir } from "os";
-import { join } from "path";
 import { existsSync } from "fs";
+import { join } from "path";
+import { resolveAgentPaths, getOwnedWorkspace, isValidAgentId } from "@/lib/agent-security";
 import { getServerUser } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
@@ -12,16 +12,25 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { agentId, name, description, specialty } = await request.json();
+    const { companyId, agentId, name, description, specialty } = await request.json();
 
-    if (!agentId || !name) {
-      return NextResponse.json({ error: "agentId and name are required" }, { status: 400 });
+    if (!companyId || !agentId || !name) {
+      return NextResponse.json(
+        { error: "companyId, agentId, and name are required" },
+        { status: 400 }
+      );
     }
 
-    const homeDir = homedir();
-    const openclawDir = join(homeDir, ".openclaw");
-    const workspaceDir = join(openclawDir, `workspace-${agentId}`);
-    const configPath = join(openclawDir, "openclaw.json");
+    if (!isValidAgentId(agentId)) {
+      return NextResponse.json({ error: "Invalid agentId" }, { status: 400 });
+    }
+
+    const ownedWorkspace = await getOwnedWorkspace(user.id, companyId);
+    if (!ownedWorkspace) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const { workspaceDir, configPath } = resolveAgentPaths(agentId);
 
     // Create workspace directory
     await mkdir(workspaceDir, { recursive: true });
@@ -76,8 +85,14 @@ Specialty: ${specialty || "general"}
 
     return NextResponse.json({ ok: true, workspace: workspaceDir });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const message =
+      error instanceof Error && error.message === "Invalid agentId"
+        ? error.message
+        : error instanceof Error
+          ? error.message
+          : "Unknown error";
+    const status = message === "Invalid agentId" ? 400 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 

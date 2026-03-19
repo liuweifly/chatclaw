@@ -235,7 +235,7 @@ function reducer(state: AppState, action: Action): AppState {
 // ── Context ─────────────────────────────────────────────────────────
 
 interface StoreActions {
-  createCompany: (name: string, gatewayUrl: string, gatewayToken: string, description?: string) => Promise<Company>;
+  createCompany: (name: string, description?: string) => Promise<Company>;
   updateCompany: (id: string, updates: Partial<Company>) => Promise<void>;
   deleteCompany: (id: string) => Promise<void>;
   selectCompany: (id: string) => Promise<void>;
@@ -322,8 +322,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         id: companyId,
         name: `${lobster.name} Workspace`,
         description: `Hosted workspace for ${lobster.name}.`,
-        gatewayUrl: "",
-        gatewayToken: "",
         defaultAgentId: agentId,
         createdAt: Date.parse(lobster.created_at) || Date.now(),
         updatedAt: Date.parse(lobster.updated_at) || Date.now(),
@@ -481,8 +479,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const connectGateway = useCallback(() => {
     const current = stateRef.current;
-    const company = current.companies.find((c) => c.id === current.activeCompanyId);
-    if (!company?.gatewayUrl || !company?.gatewayToken) return;
+    if (!current.activeCompanyId) return;
     const connectionScope = storageScopeRef.current;
 
     if (gatewayRef.current) {
@@ -492,7 +489,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const client = new GatewayClient();
     gatewayRef.current = client;
 
-    client.configure(company.gatewayUrl, company.gatewayToken, {
+    client.configure({
       onConnectionStatus: (status: ConnectionStatus) => {
         if (connectionScope !== storageScopeRef.current) {
           return;
@@ -607,7 +604,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       onError: () => {},
     });
 
-    client.connect();
+    void client.connect();
   }, [resolveAgentFromSession]);
 
   const disconnectGateway = useCallback(() => {
@@ -626,14 +623,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   // ── Actions ───────────────────────────────────────────────────────
 
-  const createCompanyAction = useCallback(async (name: string, gatewayUrl: string, gatewayToken: string, description?: string) => {
+  const createCompanyAction = useCallback(async (name: string, description?: string) => {
     const now = Date.now();
     const company: Company = {
       id: uuidv4(),
       name,
       description,
-      gatewayUrl,
-      gatewayToken,
       createdAt: now,
       updatedAt: now,
     };
@@ -645,14 +640,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const updateCompanyAction = useCallback(async (id: string, updates: Partial<Company>) => {
     await dbUpdateCompany(storageScopeRef.current, id, updates);
     dispatch({ type: "UPDATE_COMPANY", id, updates });
-
-    if (updates.gatewayUrl || updates.gatewayToken) {
-      const current = stateRef.current;
-      if (current.activeCompanyId === id) {
-        setTimeout(() => connectGateway(), 100);
-      }
-    }
-  }, [connectGateway]);
+  }, []);
 
   const deleteCompanyAction = useCallback(async (id: string) => {
     const current = stateRef.current;
@@ -730,6 +718,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          companyId: opts.companyId,
           agentId: agent.id,
           name: agent.name,
           description: agent.description,
@@ -769,10 +758,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
+      if (!deletedAgent) {
+        throw new Error("Missing deleted agent context");
+      }
+
       await fetch("/api/agents/delete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ agentId: id }),
+        body: JSON.stringify({ companyId: deletedAgent.companyId, agentId: id }),
       });
     } catch {
       // Non-critical
@@ -996,7 +989,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
           const data = (await res.json()) as {
             found?: boolean;
-            gateway?: { url?: string; token?: string };
+            gateway?: { url?: string; hasToken?: boolean };
             agents?: Array<{ id: string; name: string }>;
           };
 
@@ -1006,8 +999,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
               id: companyId,
               name: "AI Operator Demo",
               description: "Hosted OpenClaw demo workspace",
-              gatewayUrl: data.gateway?.url ?? "",
-              gatewayToken: data.gateway?.token ?? "",
               createdAt: Date.now(),
               updatedAt: Date.now(),
             };
@@ -1119,7 +1110,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!state.initialized) return;
     const company = state.companies.find((c) => c.id === state.activeCompanyId);
-    if (company?.gatewayUrl && company?.gatewayToken) {
+    if (company) {
       connectGateway();
     }
   }, [connectGateway, state.activeCompanyId, state.companies, state.initialized]);
