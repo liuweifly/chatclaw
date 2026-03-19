@@ -37,6 +37,7 @@ export interface LobsterWorkspaceSnapshot {
   companyId: string;
   agentId: string;
   workspaceDir: string;
+  dashboardUrl: string | null;
   skills: LobsterWorkspaceSkill[];
   memoryEntries: LobsterWorkspaceMemoryEntry[];
   sessions: LobsterWorkspaceSession[];

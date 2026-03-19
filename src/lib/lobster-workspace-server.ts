@@ -8,6 +8,7 @@ import { getOwnedWorkspace, resolveAgentPaths } from "@/lib/agent-security";
 import {
   fetchRemoteGatewayAgents,
   getGatewayConfig,
+  getGatewayDashboardUrl,
   getLocalGatewayAgents,
 } from "@/lib/gateway-config";
 import type {
@@ -802,8 +803,9 @@ export async function readLobsterWorkspaceSnapshot(
     return null;
   }
 
-  const [{ runtimeSkills, sessions }, memoryEntries, installedSkills, curatedSkills] =
+  const [dashboardUrl, { runtimeSkills, sessions }, memoryEntries, installedSkills, curatedSkills] =
     await Promise.all([
+      getGatewayDashboardUrl(),
       readRecentSessions(context),
       readMemoryEntries(context.workspaceDir),
       listInstalledCustomSkills(context.codexHome),
@@ -826,6 +828,7 @@ export async function readLobsterWorkspaceSnapshot(
     companyId: context.companyId,
     agentId: context.agentId,
     workspaceDir: context.workspaceDir,
+    dashboardUrl,
     skills: sortSkills([...skills.values()]),
     memoryEntries,
     sessions,

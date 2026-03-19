@@ -47,6 +47,8 @@ Set:
 ```bash
 GATEWAY_URL=http://clawhost.example.com/proxy/your-bot-id
 GATEWAY_TOKEN=your-bot-access-token
+# Optional, used to render an "Open OpenClaw" link inside ChatClaw.
+GATEWAY_DASHBOARD_URL=https://clawhost.example.com/dashboard
 ```
 
 When `GATEWAY_URL` and `GATEWAY_TOKEN` are present, ChatClaw uses them for gateway detection and bootstrap. If they are not set, ChatClaw falls back to the local `~/.openclaw/openclaw.json` flow for backward compatibility.

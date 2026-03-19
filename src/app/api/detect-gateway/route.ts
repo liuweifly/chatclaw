@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { getGatewayAvailability, getGatewayConfig } from "@/lib/gateway-config";
+import {
+  getGatewayAvailability,
+  getGatewayConfig,
+  getGatewayDashboardUrl,
+} from "@/lib/gateway-config";
 import { getServerUser } from "@/lib/supabase/server";
 
 export async function GET() {
@@ -13,11 +17,15 @@ export async function GET() {
     return NextResponse.json({ found: false });
   }
 
-  const availability = await getGatewayAvailability(config);
+  const [availability, dashboardUrl] = await Promise.all([
+    getGatewayAvailability(config),
+    getGatewayDashboardUrl(),
+  ]);
 
   return NextResponse.json({
     found: true,
     url: config.url,
+    dashboardUrl,
     hasToken: Boolean(config.token),
     source: config.source,
     chatReady: availability.chatReady,

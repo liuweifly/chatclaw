@@ -6,6 +6,7 @@ import {
   Brain,
   Bot,
   CheckCircle2,
+  ExternalLink,
   FileText,
   Globe,
   ImageIcon,
@@ -592,6 +593,47 @@ function WorkspaceMeta({
   );
 }
 
+function WorkspaceLinkMeta({
+  label,
+  href,
+  fallback,
+  actionLabel,
+}: {
+  label: string;
+  href?: string | null;
+  fallback: string;
+  actionLabel: string;
+}) {
+  return (
+    <div className="rounded-xl border border-white/6 bg-black/10 p-3">
+      <p className="text-[11px] uppercase tracking-[0.18em] text-discord-muted">{label}</p>
+      {href ? (
+        <>
+          <a
+            href={href}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-2 block break-all text-xs leading-5 text-discord-blurple transition-colors hover:underline"
+          >
+            {href}
+          </a>
+          <a
+            href={href}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-3 inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-white/10"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            {actionLabel}
+          </a>
+        </>
+      ) : (
+        <p className="mt-2 text-xs leading-5 text-discord-muted">{fallback}</p>
+      )}
+    </div>
+  );
+}
+
 export function MemoryPanel() {
   const t = useTranslations("workspace.panels.memory");
   const locale = useLocale();
@@ -614,7 +656,7 @@ export function MemoryPanel() {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,0.8fr)_auto]">
+      <div className="grid gap-3 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,0.8fr)_minmax(0,1.1fr)_auto]">
         <WorkspaceMeta label={t("workspaceLabel")} value={snapshot?.workspaceDir ?? "-"} />
         <WorkspaceMeta
           label={t("statsLabel")}
@@ -622,6 +664,12 @@ export function MemoryPanel() {
             memories: memoryEntries.length,
             sessions: sessions.length,
           })}
+        />
+        <WorkspaceLinkMeta
+          label={t("dashboardLabel")}
+          href={snapshot?.dashboardUrl}
+          fallback={t("dashboardUnavailable")}
+          actionLabel={t("openDashboard")}
         />
         <div className="flex items-start justify-end">
           <button
@@ -808,7 +856,7 @@ export function SkillsPanel() {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,0.8fr)_auto]">
+      <div className="grid gap-3 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,0.8fr)_minmax(0,1.1fr)_auto]">
         <WorkspaceMeta label={t("workspaceLabel")} value={snapshot?.workspaceDir ?? "-"} />
         <WorkspaceMeta
           label={t("statsLabel")}
@@ -816,6 +864,12 @@ export function SkillsPanel() {
             installed: installedCount,
             total: skills.length,
           })}
+        />
+        <WorkspaceLinkMeta
+          label={t("dashboardLabel")}
+          href={snapshot?.dashboardUrl}
+          fallback={t("dashboardUnavailable")}
+          actionLabel={t("openDashboard")}
         />
         <div className="flex items-start justify-end">
           <button

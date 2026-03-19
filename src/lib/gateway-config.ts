@@ -26,11 +26,18 @@ export interface GatewayAvailability {
   detail?: string;
 }
 
+type GatewayBindMode = "auto" | "lan" | "loopback" | "custom" | "tailnet";
+
 type LocalGatewayConfigFile = {
   gateway?: {
     port?: number;
+    bind?: GatewayBindMode;
+    customBindHost?: string;
     auth?: {
       token?: string;
+    };
+    controlUi?: {
+      basePath?: string;
     };
     http?: {
       endpoints?: {
@@ -107,6 +114,123 @@ export function toGatewayHttpBaseUrl(url: string): string {
     .replace(/^ws:\/\//, "http://")
     .replace(/^wss:\/\//, "https://")
     .replace(/\/+$/, "");
+}
+
+function normalizeControlUiBasePath(basePath?: string): string {
+  if (!basePath) {
+    return "";
+  }
+
+  let normalized = basePath.trim();
+  if (!normalized) {
+    return "";
+  }
+
+  if (!normalized.startsWith("/")) {
+    normalized = `/${normalized}`;
+  }
+
+  if (normalized === "/") {
+    return "";
+  }
+
+  if (normalized.endsWith("/")) {
+    normalized = normalized.slice(0, -1);
+  }
+
+  return normalized;
+}
+
+function withDashboardToken(url: string, token: string): string {
+  const trimmedToken = token.trim();
+  if (!trimmedToken) {
+    return url;
+  }
+
+  try {
+    const parsed = new URL(url);
+    parsed.hash = `token=${encodeURIComponent(trimmedToken)}`;
+    return parsed.toString();
+  } catch {
+    return `${url}#token=${encodeURIComponent(trimmedToken)}`;
+  }
+}
+
+function buildDashboardUrl(params: {
+  host: string;
+  port: number;
+  basePath?: string;
+  token: string;
+}): string {
+  const basePath = normalizeControlUiBasePath(params.basePath);
+  const uiPath = basePath ? `${basePath}/` : "/";
+  return withDashboardToken(`http://${params.host}:${params.port}${uiPath}`, params.token);
+}
+
+function resolveLocalDashboardHost(gateway?: LocalGatewayConfigFile["gateway"]): string | null {
+  const bind = gateway?.bind ?? "loopback";
+  const customBindHost = gateway?.customBindHost?.trim();
+
+  if (bind === "tailnet") {
+    return null;
+  }
+
+  if (bind === "custom" && customBindHost) {
+    return customBindHost;
+  }
+
+  return "127.0.0.1";
+}
+
+function inferEnvDashboardUrl(gatewayUrl: string, token: string): string | null {
+  try {
+    const parsed = new URL(toGatewayHttpBaseUrl(gatewayUrl));
+    if (parsed.pathname && parsed.pathname !== "/") {
+      return null;
+    }
+
+    parsed.pathname = "/";
+    parsed.search = "";
+    return withDashboardToken(parsed.toString(), token);
+  } catch {
+    return null;
+  }
+}
+
+export async function getGatewayDashboardUrl(): Promise<string | null> {
+  const envDashboardUrl = readEnv("GATEWAY_DASHBOARD_URL");
+  const envToken = readEnv("GATEWAY_TOKEN");
+  if (envDashboardUrl) {
+    return withDashboardToken(envDashboardUrl, envToken);
+  }
+
+  const envConfig = getEnvGatewayConfig();
+  if (envConfig) {
+    return inferEnvDashboardUrl(envConfig.url, envConfig.token);
+  }
+
+  const config = await readLocalGatewayConfig();
+  const gateway = config?.gateway;
+  if (!gateway) {
+    return null;
+  }
+
+  const token = gateway?.auth?.token?.trim();
+  if (!token) {
+    return null;
+  }
+
+  const host = resolveLocalDashboardHost(gateway);
+  if (!host) {
+    return null;
+  }
+
+  return buildDashboardUrl({
+    host,
+    port: gateway.port ?? 18789,
+    basePath: gateway.controlUi?.basePath,
+    token,
+  });
 }
 
 function formatProbeDetail(value: string): string {
