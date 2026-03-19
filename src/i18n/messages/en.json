@@ -190,6 +190,23 @@
       "personalWorkspace": "Personal workspace",
       "createFirstLobster": "Create your first lobster"
     },
+    "agents": {
+      "title": "Agents",
+      "description": "Switch the active specialist for this workspace.",
+      "add": "Add agent",
+      "empty": "No agents in this workspace yet. Add one to start another thread of work.",
+      "default": "Default",
+      "dialog": {
+        "title": "Add agent",
+        "description": "Create another specialist AI agent inside this workspace.",
+        "name": "Agent name",
+        "namePlaceholder": "Baikal Assistant",
+        "descriptionLabel": "Description",
+        "descriptionPlaceholder": "What role should this agent play?",
+        "specialty": "Specialty",
+        "submit": "Add agent"
+      }
+    },
     "views": {
       "channels": {
         "title": "Channels",
@@ -338,13 +355,25 @@
         }
       },
       "memory": {
-        "footer": "Memory grows as you chat. The more you use your lobster, the better it knows you.",
-        "items": {
-          "longTerm": { "title": "Long-term memory", "description": "Persists across sessions and remembers projects, preferences, and past decisions." },
-          "dailyNotes": { "title": "Daily notes", "description": "Auto-logged context on what happened, what was discussed, and what to follow up on." },
-          "profile": { "title": "User profile", "description": "Knows your name, timezone, communication style, and working habits." },
-          "projects": { "title": "Project context", "description": "Tracks active projects, goals, deadlines, and key decisions." }
-        }
+        "selectLobster": "Select a lobster first to inspect its VPS workspace.",
+        "loading": "Loading memory and recent chat history from the VPS workspace...",
+        "retry": "Refresh",
+        "workspaceLabel": "Workspace",
+        "statsLabel": "Snapshot",
+        "statsValue": "{memories} memory files · {sessions} recent sessions",
+        "sessionsTitle": "Recent conversations",
+        "sessionsDescription": "Directly read from the lobster's OpenClaw session files on the VPS.",
+        "sessionFallback": "unknown source",
+        "sessionUnknownType": "unknown chat",
+        "sessionCount": "{count} messages",
+        "lastUser": "Last user message",
+        "lastAssistant": "Last assistant reply",
+        "filesTitle": "Memory files",
+        "filesDescription": "Files from `MEMORY.md` and the workspace `memory/` directory.",
+        "longTerm": "Long-term memory",
+        "note": "Memory note",
+        "noPreview": "No readable preview was found in this file.",
+        "empty": "No memory files or recent chat sessions were found for this workspace yet."
       },
       "capabilities": {
         "active": "Active",
@@ -361,20 +390,26 @@
         }
       },
       "skills": {
+        "selectLobster": "Select a lobster first to inspect its VPS skills.",
+        "loading": "Loading the VPS skill snapshot for this lobster...",
+        "retry": "Refresh",
+        "workspaceLabel": "Workspace",
+        "statsLabel": "Skills",
+        "statsValue": "{installed} installed · {total} visible",
+        "active": "Active now",
         "installed": "Installed",
         "available": "Available",
         "install": "Install",
-        "footerPrefix": "Browse more skills at",
-        "items": {
-          "github": { "name": "GitHub", "description": "Manage issues, PRs, and CI runs." },
-          "googleWorkspace": { "name": "Google Workspace", "description": "Gmail, Calendar, Drive, Docs, and Sheets." },
-          "weather": { "name": "Weather", "description": "Current weather and forecasts." },
-          "webSearch": { "name": "Web Search", "description": "AI-optimized web search." },
-          "codingAgent": { "name": "Coding Agent", "description": "Delegate coding tasks to terminal coding agents." },
-          "seo": { "name": "SEO Toolkit", "description": "Site audits, content writing, and keyword research." },
-          "notion": { "name": "Notion", "description": "Create and manage Notion pages and databases." },
-          "analytics": { "name": "Analytics", "description": "Google Analytics 4 and Search Console." }
-        }
+        "installing": "Installing...",
+        "noDescription": "No description was found for this skill.",
+        "sources": {
+          "runtime": "Runtime",
+          "custom": "Custom",
+          "curated": "Curated",
+          "bundled": "Bundled"
+        },
+        "empty": "No skills were detected for this lobster yet.",
+        "footer": "Installed skills are read from the VPS runtime and local Codex skill directories. Newly installed curated skills may need a new session or runtime restart before they appear as active in chat."
       }
     },
     "chat": {

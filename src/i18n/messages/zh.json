@@ -190,6 +190,23 @@
       "personalWorkspace": "个人工作区",
       "createFirstLobster": "创建你的第一个小龙虾"
     },
+    "agents": {
+      "title": "智能体",
+      "description": "切换这个工作区当前活跃的专家智能体。",
+      "add": "添加智能体",
+      "empty": "这个工作区里还没有额外智能体。添加一个，开启新的工作线程。",
+      "default": "默认",
+      "dialog": {
+        "title": "添加智能体",
+        "description": "在当前工作区里再创建一个专业智能体。",
+        "name": "智能体名称",
+        "namePlaceholder": "Baikal Assistant",
+        "descriptionLabel": "描述",
+        "descriptionPlaceholder": "这个智能体应该扮演什么角色？",
+        "specialty": "专长",
+        "submit": "添加智能体"
+      }
+    },
     "views": {
       "channels": {
         "title": "渠道",
@@ -338,13 +355,25 @@
         }
       },
       "memory": {
-        "footer": "记忆会随着聊天而增长。你用得越多，它就越了解你。",
-        "items": {
-          "longTerm": { "title": "长期记忆", "description": "跨会话保留并记住项目、偏好和过去决策。" },
-          "dailyNotes": { "title": "每日笔记", "description": "自动记录发生了什么、讨论了什么、后续要跟进什么。" },
-          "profile": { "title": "用户画像", "description": "了解你的名字、时区、沟通方式和工作习惯。" },
-          "projects": { "title": "项目上下文", "description": "跟踪当前项目、目标、截止日期和关键决策。" }
-        }
+        "selectLobster": "先选择一个小龙虾，再查看它在 VPS 上的 workspace。",
+        "loading": "正在从 VPS workspace 加载记忆与最近聊天记录...",
+        "retry": "刷新",
+        "workspaceLabel": "Workspace",
+        "statsLabel": "快照",
+        "statsValue": "{memories} 个记忆文件 · {sessions} 个最近会话",
+        "sessionsTitle": "最近会话",
+        "sessionsDescription": "直接读取该 lobster 在 VPS 上的 OpenClaw session 文件。",
+        "sessionFallback": "未知来源",
+        "sessionUnknownType": "未知会话",
+        "sessionCount": "{count} 条消息",
+        "lastUser": "最后一条用户消息",
+        "lastAssistant": "最后一条助手回复",
+        "filesTitle": "记忆文件",
+        "filesDescription": "来自 `MEMORY.md` 以及 workspace `memory/` 目录的真实文件。",
+        "longTerm": "长期记忆",
+        "note": "记忆笔记",
+        "noPreview": "这个文件里没有可读预览。",
+        "empty": "这个 workspace 里还没有检测到记忆文件或最近聊天会话。"
       },
       "capabilities": {
         "active": "已启用",
@@ -361,20 +390,26 @@
         }
       },
       "skills": {
+        "selectLobster": "先选择一个小龙虾，再查看它在 VPS 上的 Skills。",
+        "loading": "正在加载这个 lobster 的 VPS Skills 快照...",
+        "retry": "刷新",
+        "workspaceLabel": "Workspace",
+        "statsLabel": "技能",
+        "statsValue": "已安装 {installed} 个 · 可见 {total} 个",
+        "active": "当前生效",
         "installed": "已安装",
         "available": "可用",
         "install": "安装",
-        "footerPrefix": "更多技能请访问",
-        "items": {
-          "github": { "name": "GitHub", "description": "管理 issue、PR 和 CI 运行。" },
-          "googleWorkspace": { "name": "Google Workspace", "description": "Gmail、日历、Drive、Docs 和 Sheets。" },
-          "weather": { "name": "天气", "description": "当前天气和预报。" },
-          "webSearch": { "name": "网页搜索", "description": "面向 AI 的网页搜索。" },
-          "codingAgent": { "name": "编码智能体", "description": "将编码任务委托给终端编码智能体。" },
-          "seo": { "name": "SEO 工具包", "description": "站点审计、内容写作和关键词研究。" },
-          "notion": { "name": "Notion", "description": "创建并管理 Notion 页面和数据库。" },
-          "analytics": { "name": "分析", "description": "Google Analytics 4 和 Search Console。" }
-        }
+        "installing": "安装中...",
+        "noDescription": "没有找到这个 skill 的描述。",
+        "sources": {
+          "runtime": "运行时",
+          "custom": "自定义",
+          "curated": "Curated",
+          "bundled": "内置"
+        },
+        "empty": "这个 lobster 还没有检测到任何 skill。",
+        "footer": "页面会从 VPS 运行时快照和本机 Codex skill 目录读取真实技能。新安装的 curated skill 可能需要重新开新会话或重启运行时，才会出现在聊天里的 active snapshot 中。"
       }
     },
     "chat": {
