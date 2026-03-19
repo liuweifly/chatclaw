@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Bot, Brain, CreditCard, Link2, Package } from "lucide-react";
 import { AuthModal } from "@/components/auth-modal";
 import { ChatArea } from "@/components/chat-area";
@@ -62,7 +62,7 @@ export function WorkspaceMain() {
   const { user } = useAuth();
   const { state, actions } = useStore();
   const [showAuthModal, setShowAuthModal] = useState(true);
-  const [hadAuthenticatedUser, setHadAuthenticatedUser] = useState(Boolean(user));
+  const previousUserIdRef = useRef(user?.id ?? null);
   const primaryAgent = getPrimaryAgent(state);
   const onboardingState = useSyncExternalStore(
     subscribeOnboarding,
@@ -100,17 +100,22 @@ export function WorkspaceMain() {
   }, [onboardingState, primaryAgent]);
 
   useEffect(() => {
+    const previousUserId = previousUserIdRef.current;
+    previousUserIdRef.current = user?.id ?? null;
+
     if (user) {
-      setHadAuthenticatedUser(true);
-      setShowAuthModal(false);
+      queueMicrotask(() => {
+        setShowAuthModal(false);
+      });
       return;
     }
 
-    if (hadAuthenticatedUser) {
-      setShowAuthModal(true);
-      setHadAuthenticatedUser(false);
+    if (previousUserId) {
+      queueMicrotask(() => {
+        setShowAuthModal(true);
+      });
     }
-  }, [hadAuthenticatedUser, user]);
+  }, [user]);
 
   const navigateToView = (view: WorkspaceView) => {
     if (view === "chat" && primaryAgent) {

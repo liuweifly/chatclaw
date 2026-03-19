@@ -18,7 +18,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = (await request.json()) as { plan?: string };
+  const rawBody = await request.text();
+  let body: { plan?: string } = {};
+
+  if (rawBody.trim()) {
+    try {
+      body = JSON.parse(rawBody) as { plan?: string };
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+  }
+
   const plan = normalizePlan(body.plan);
 
   if (plan === "free") {
