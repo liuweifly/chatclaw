@@ -69,6 +69,18 @@ export interface LobsterTeamRecord {
   updated_at: string;
 }
 
+export interface ChannelRecord {
+  id: string;
+  lobster_id: string;
+  type: string;
+  config: Record<string, unknown> | null;
+  status: string | null;
+  created_at: string;
+  updated_at?: string | null;
+  connected_at?: string | null;
+  last_error?: string | null;
+}
+
 export interface AccountPayload {
   user: SupabaseUser;
   profile: ProfileRecord | null;
